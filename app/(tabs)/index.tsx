@@ -1,75 +1,112 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, Alert, Pressable, Image, ActivityIndicator } from 'react-native';
+import api from '../../src/api/api';
+import { useRouter, Link, Stack } from 'expo-router';
+import { useAuthLoja } from '../../src/api/contexts/AuthLojaContext';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { login } = useAuthLoja();
 
-export default function HomeScreen() {
+  const handleLogin = async () => {
+    if (!email || !senha) {
+      Alert.alert('Atenção', 'Por favor, preencha e-mail e senha.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await api.post('/lojas/login', {
+        email_login: email,
+        senha: senha
+      });
+
+      // Guarda os dados da loja no contexto global
+      await login(response.data.loja);
+
+      // Navega para o painel. Já não precisamos de passar parâmetros,
+      // pois o painel irá obter os dados do contexto.
+      router.replace("/dashboard");
+
+    } catch (error: any) {
+      const mensagemErro = error.response?.data?.message || 'Não foi possível conectar ao servidor.';
+      Alert.alert('Erro no Login', mensagemErro);
+    } finally {
+        setLoading(false);
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Image
+        source={require('../../assets/logo.png')}
+        style={styles.logo}
+      />
+      <Text style={styles.titulo}>Login do Lojista</Text>
+
+      <TextInput style={styles.input} placeholder="Digite seu e-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <TextInput style={styles.input} placeholder="Digite sua senha" value={senha} onChangeText={setSenha} secureTextEntry />
+
+      <View style={styles.buttonContainer}>
+        {loading ? (
+            <ActivityIndicator size="large" color="#007BFF" />
+        ) : (
+            <Button title="Entrar" onPress={handleLogin} />
+        )}
+      </View>
+
+      <Link href="/register" asChild>
+        <Pressable>
+          <Text style={styles.linkText}>
+            Ainda não tem uma conta? Cadastre-se
+          </Text>
+        </Pressable>
+      </Link>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  logo: {
+    width: 180,
+    height: 180,
+    resizeMode: 'contain',
+    alignSelf: 'center',
+    marginBottom: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  titulo: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 40,
   },
+  input: {
+    height: 50,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 15,
+    paddingHorizontal: 15,
+    backgroundColor: '#fff',
+    fontSize: 16,
+  },
+  buttonContainer: {
+    marginBottom: 20,
+    height: 40,
+    justifyContent: 'center',
+  },
+  linkText: {
+    color: '#007BFF',
+    textAlign: 'center',
+    fontSize: 16,
+  }
 });

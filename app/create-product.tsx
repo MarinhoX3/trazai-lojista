@@ -1,0 +1,116 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, Image, Pressable, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import api from '../src/api/api';
+import * as ImagePicker from 'expo-image-picker';
+
+export default function CreateProductScreen() {
+  const router = useRouter();
+  const { lojaId } = useLocalSearchParams();
+
+  const [nome, setNome] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [preco, setPreco] = useState('');
+  const [unidade, setUnidade] = useState('UN');
+  const [estoque, setEstoque] = useState('');
+  const [imagem, setImagem] = useState<ImagePicker.ImagePickerAsset | null>(null);
+
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert("Atenção", "Você precisa permitir o acesso à galeria para selecionar uma imagem.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setImagem(result.assets[0]);
+    }
+  };
+
+  // VERSÃO FINAL DA FUNÇÃO PARA SALVAR
+  const handleCreateProduct = async () => {
+    if (!nome || !preco || !lojaId) {
+      Alert.alert('Atenção', 'Nome e Preço são obrigatórios.');
+      return;
+    }
+
+    // 1. Cria o "pacote" FormData
+    const formData = new FormData();
+
+    // 2. Adiciona os dados de texto ao pacote
+    formData.append('id_loja', String(lojaId));
+    formData.append('nome', nome);
+    formData.append('descricao', descricao);
+    formData.append('preco', preco.replace(',', '.'));
+    formData.append('unidade_de_venda', unidade);
+    formData.append('estoque', estoque ? estoque.replace(',', '.') : '0');
+    
+    // 3. Adiciona a imagem ao pacote (se uma imagem foi selecionada)
+    if (imagem) {
+      // Pega o nome do arquivo e o tipo da imagem
+      const uri = imagem.uri;
+      const uriParts = uri.split('.');
+      const fileType = uriParts[uriParts.length - 1];
+
+      formData.append('foto_produto', {
+        uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+        name: `photo.${fileType}`,
+        type: `image/${fileType}`,
+      } as any);
+    }
+    
+    try {
+      // 4. Envia o pacote para o backend
+      await api.post('/produtos', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      Alert.alert('Sucesso!', 'Produto cadastrado.', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+
+    } catch (error: any) {
+      const mensagemErro = error.response?.data?.message || 'Não foi possível cadastrar o produto.';
+      Alert.alert('Erro', mensagemErro);
+    }
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.titulo}>Adicionar Novo Produto</Text>
+
+      <Pressable style={styles.botaoImagem} onPress={pickImage}>
+        <Text style={styles.botaoTexto}>Selecionar Imagem</Text>
+      </Pressable>
+
+      {imagem && <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />}
+
+      <TextInput style={styles.input} placeholder="Nome do Produto *" value={nome} onChangeText={setNome} />
+      <TextInput style={styles.input} placeholder="Descrição" value={descricao} onChangeText={setDescricao} />
+      <TextInput style={styles.input} placeholder="Preço (ex: 10.99) *" value={preco} onChangeText={setPreco} keyboardType="numeric" />
+      <TextInput style={styles.input} placeholder="Estoque (ex: 50)" value={estoque} onChangeText={setEstoque} keyboardType="numeric" />
+      <TextInput style={styles.input} placeholder="Unidade de Venda (UN, KG, etc) *" value={unidade} onChangeText={setUnidade} />
+      
+      <View style={styles.buttonContainer}>
+        <Button title="Salvar Produto" onPress={handleCreateProduct} />
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
+  titulo: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
+  input: { height: 50, borderColor: '#ccc', borderWidth: 1, borderRadius: 8, marginBottom: 15, paddingHorizontal: 15, backgroundColor: '#fff', fontSize: 16 },
+  botaoImagem: { backgroundColor: '#5bc0de', padding: 15, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
+  botaoTexto: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  imagemPreview: { width: '100%', height: 200, borderRadius: 8, marginBottom: 15, backgroundColor: '#eee' },
+  buttonContainer: { marginTop: 10 },
+});

@@ -1,29 +1,46 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import React from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { AuthLojaProvider } from '../src/api/contexts/AuthLojaContext';
+import { Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
+// Este é o ficheiro de layout principal do seu app-lojista.
+// Ele controla a navegação e a aparência dos cabeçalhos de todas as telas.
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
+  const router = useRouter();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    // 1. O AuthLojaProvider envolve toda a aplicação,
+    // garantindo que os dados de login estão sempre disponíveis.
+    <AuthLojaProvider>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
+        {/* 2. Definimos aqui cada tela da nossa aplicação */}
+
+        {/* Telas que não devem ter cabeçalho visível */}
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="dashboard" options={{ headerShown: false }} />
+
+        {/* Telas com títulos simples */}
+        <Stack.Screen name="register" options={{ title: 'Cadastro de Loja' }} />
+        <Stack.Screen name="edit-loja" options={{ title: 'Editar Dados da Loja' }} />
+        <Stack.Screen name="create-product" options={{ title: 'Adicionar Novo Produto' }} />
+        <Stack.Screen name="edit-product" options={{ title: 'Editar Produto' }} />
+        <Stack.Screen name="historico-pedidos" options={{ title: 'Histórico de Pedidos' }}/>
+        <Stack.Screen name="imprimir-pedido" options={{ title: 'Imprimir Cupom' }}/>
+
+        {/* Tela de Pedidos com um botão customizado no cabeçalho */}
+        <Stack.Screen 
+          name="pedidos-loja" 
+          options={{ 
+            title: 'Pedidos Ativos',
+            headerRight: () => (
+                <Pressable onPress={() => router.push('/historico-pedidos')} style={{ marginRight: 15 }}>
+                    <Ionicons name="archive-outline" size={24} color="#007BFF" />
+                </Pressable>
+            )
+          }} 
+        />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </AuthLojaProvider>
   );
 }

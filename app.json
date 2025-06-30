@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "app-lojista",
-    "slug": "app-lojista",
+    "name": "traz-ai-lojista",
+    "slug": "traz-ai-lojista",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
