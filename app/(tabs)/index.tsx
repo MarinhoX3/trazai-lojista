@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, Pressable, Image, ActivityIndicator } from 'react-native';
+// --- CORREÇÃO 1: Caminhos de importação ajustados ---
 import api from '../../src/api/api';
 import { useRouter, Link, Stack } from 'expo-router';
 import { useAuthLoja } from '../../src/api/contexts/AuthLojaContext';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  
   const router = useRouter();
   const { login } = useAuthLoja();
 
@@ -23,11 +27,7 @@ export default function LoginScreen() {
         senha: senha
       });
 
-      // Guarda os dados da loja no contexto global
       await login(response.data.loja);
-
-      // Navega para o painel. Já não precisamos de passar parâmetros,
-      // pois o painel irá obter os dados do contexto.
       router.replace("/dashboard");
 
     } catch (error: any) {
@@ -45,10 +45,29 @@ export default function LoginScreen() {
         source={require('../../assets/logo.png')}
         style={styles.logo}
       />
-      <Text style={styles.titulo}>Login do Lojista</Text>
+      <Text style={styles.titulo}>Bem-vindo!</Text>
+      {/* --- CORREÇÃO 2: Texto "Lojista" adicionado --- */}
+      <Text style={styles.tituloLojista}>Lojista</Text>
+      <Text style={styles.subtitulo}>Faça seu login para continuar</Text>
 
       <TextInput style={styles.input} placeholder="Digite seu e-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-      <TextInput style={styles.input} placeholder="Digite sua senha" value={senha} onChangeText={setSenha} secureTextEntry />
+      
+      <View style={styles.passwordContainer}>
+        <TextInput 
+          style={styles.inputPassword} 
+          placeholder="Digite sua senha" 
+          value={senha} 
+          onChangeText={setSenha} 
+          secureTextEntry={!isPasswordVisible} 
+        />
+        <Pressable onPress={() => setIsPasswordVisible(!isPasswordVisible)} style={styles.eyeIcon}>
+            <Ionicons 
+                name={isPasswordVisible ? "eye-off" : "eye"} 
+                size={24} 
+                color="#000"
+            />
+        </Pressable>
+      </View>
 
       <View style={styles.buttonContainer}>
         {loading ? (
@@ -74,11 +93,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   logo: {
-    width: 180,
-    height: 180,
+    width: 150,
+    height: 150,
     resizeMode: 'contain',
     alignSelf: 'center',
     marginBottom: 20,
@@ -87,7 +106,20 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 40,
+    color: '#333',
+  },
+  tituloLojista: {
+    fontSize: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#333',
+    marginBottom: 10,
+  },
+  subtitulo: {
+    fontSize: 16,
+    color: 'gray',
+    textAlign: 'center',
+    marginBottom: 30,
   },
   input: {
     height: 50,
@@ -96,10 +128,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     paddingHorizontal: 15,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
     fontSize: 16,
+    color: '#000',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 15,
+    backgroundColor: '#f5f5f5',
+  },
+  inputPassword: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: '#000',
+  },
+  eyeIcon: {
+    padding: 10,
   },
   buttonContainer: {
+    marginTop: 10,
     marginBottom: 20,
     height: 40,
     justifyContent: 'center',
