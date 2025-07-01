@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, Pressable, Image, ActivityIndicator } from 'react-native';
 // --- CORREÇÃO 1: Caminhos de importação ajustados ---
-import api from '../../src/api/api';
+import api from '../src/api/api';
 import { useRouter, Link, Stack } from 'expo-router';
-import { useAuthLoja } from '../../src/api/contexts/AuthLojaContext';
+import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {

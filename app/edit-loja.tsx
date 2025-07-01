@@ -7,26 +7,31 @@ import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 
 export default function EditLojaScreen() {
   const router = useRouter();
-  const { loja, updateLojaContext } = useAuthLoja();
+  const { loja, updateLojaContext, logout } = useAuthLoja();
 
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
   const [endereco, setEndereco] = useState('');
   const [logo, setLogo] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [logoAtualUrl, setLogoAtualUrl] = useState<string | null>(null);
+  // Iniciamos o loading como true para mostrar o indicador enquanto os dados são buscados.
   const [loading, setLoading] = useState(true);
 
+  // Este useEffect é responsável por buscar e preencher os dados da loja.
   useEffect(() => {
+    // Se não houver loja no contexto, não fazemos nada e paramos o loading.
     if (!loja?.id) {
         setLoading(false);
+        // Adicionamos um alerta para informar o utilizador do problema.
+        Alert.alert("Erro", "Não foi possível carregar os dados da loja. Por favor, tente fazer login novamente.");
         return;
     };
 
     const fetchLojaData = async () => {
       try {
-        setLoading(true);
         const response = await api.get(`/lojas/${loja.id}`);
         const { nome_loja, telefone_contato, endereco_loja, url_logo } = response.data;
+        // Preenchemos os campos do formulário com os dados recebidos da API.
         setNome(nome_loja || '');
         setTelefone(telefone_contato || '');
         setEndereco(endereco_loja || '');
@@ -34,14 +39,14 @@ export default function EditLojaScreen() {
       } catch (error) {
         Alert.alert("Erro", "Não foi possível carregar os dados da sua loja para edição.");
       } finally {
-        setLoading(false);
+        setLoading(false); // Paramos o loading após a busca (com sucesso ou erro).
       }
     };
+    
     fetchLojaData();
-  }, [loja?.id]);
+  }, [loja?.id]); // A busca é executada sempre que o ID da loja estiver disponível.
 
   const pickImage = async () => {
-    // CORREÇÃO: Revertemos para a sintaxe antiga que funciona, apesar do aviso.
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -94,6 +99,20 @@ export default function EditLojaScreen() {
       Alert.alert('Erro', 'Não foi possível atualizar os dados da loja.');
     }
   };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Sair",
+      "Tem a certeza de que deseja sair da sua conta?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Sim, Sair", style: "destructive", onPress: async () => {
+            await logout();
+            router.replace('/'); 
+        }}
+      ]
+    );
+  };
   
   if (loading) {
     return <View style={styles.container}><ActivityIndicator size="large" /></View>;
@@ -124,6 +143,10 @@ export default function EditLojaScreen() {
         <View style={styles.buttonContainer}>
           <Button title="Salvar Alterações" onPress={handleUpdate} />
         </View>
+
+        <View style={styles.logoutButtonContainer}>
+            <Button title="Sair (Logout)" color="red" onPress={handleLogout} />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -131,7 +154,7 @@ export default function EditLojaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  scrollContent: { padding: 20 },
+  scrollContent: { padding: 20, paddingBottom: 40 },
   titulo: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
   imageContainer: { alignItems: 'center', marginBottom: 30 },
   profileImage: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#eee', marginBottom: 10 },
@@ -139,4 +162,5 @@ const styles = StyleSheet.create({
   label: { fontSize: 16, fontWeight: '600', marginBottom: 5, color: '#333' },
   input: { height: 50, borderColor: '#ccc', borderWidth: 1, borderRadius: 8, marginBottom: 20, paddingHorizontal: 15, fontSize: 16 },
   buttonContainer: { marginTop: 20 },
+  logoutButtonContainer: { marginTop: 30 },
 });
