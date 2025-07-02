@@ -42,7 +42,7 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <Image
-        source={require('../../assets/logo.png')}
+        source={require('../assets/logo.png')}
         style={styles.logo}
       />
       <Text style={styles.titulo}>Bem-vindo!</Text>
