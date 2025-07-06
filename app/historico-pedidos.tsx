@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator } from 'react-native';
-import { Stack, useFocusEffect } from 'expo-router';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Button, Platform, Alert } from 'react-native'; // NOVO: Adicionado Button, Platform, Alert
+import { Stack } from 'expo-router';
 import api from '../src/api/api';
 import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
+// NOVO: Importa o componente de calendário
+import DateTimePicker from '@react-native-community/datetimepicker'; 
 
 interface HistoricoItem {
   id: number;
@@ -14,26 +16,58 @@ interface HistoricoItem {
 
 export default function HistoricoPedidosScreen() {
   const [pedidos, setPedidos] = useState<HistoricoItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Inicia como false
   const { loja } = useAuthLoja();
 
-  const buscarHistorico = useCallback(async () => {
-    if (!loja?.id) {
-        setLoading(false);
-        return;
-    }
+  // NOVO: Estados para controlar as datas e a visibilidade dos calendários
+  const [dataInicio, setDataInicio] = useState(new Date());
+  const [dataFim, setDataFim] = useState(new Date());
+  const [showPickerInicio, setShowPickerInicio] = useState(false);
+  const [showPickerFim, setShowPickerFim] = useState(false);
+
+  // NOVO: A função de busca agora é acionada pelo botão "Filtrar"
+  const buscarHistoricoFiltrado = useCallback(async () => {
+    if (!loja?.id) return;
+    
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await api.get(`/pedidos/loja/${loja.id}/historico`);
+      // Formata as datas para o padrão AAAA-MM-DD
+      const inicioFormatado = dataInicio.toISOString().split('T')[0];
+      const fimFormatado = dataFim.toISOString().split('T')[0];
+
+      const response = await api.get(`/pedidos/loja/${loja.id}/historico`, {
+        params: {
+          data_inicio: inicioFormatado,
+          data_fim: fimFormatado,
+        },
+      });
+      
       setPedidos(response.data);
+      if (response.data.length === 0) {
+        Alert.alert("Nenhum resultado", "Nenhum pedido encontrado para o período selecionado.");
+      }
     } catch (error) {
       console.error("Erro ao buscar histórico de pedidos:", error);
+      Alert.alert("Erro", "Não foi possível buscar o histórico de pedidos.");
     } finally {
       setLoading(false);
     }
-  }, [loja?.id]);
+  }, [loja?.id, dataInicio, dataFim]); // NOVO: Depende das datas também
 
-  useFocusEffect(useCallback(() => { buscarHistorico(); }, [buscarHistorico]));
+  // NOVO: Funções para atualizar as datas quando o usuário seleciona no calendário
+  const onChangeDataInicio = (event: any, selectedDate?: Date) => {
+    setShowPickerInicio(false); // Esconde o calendário
+    if (selectedDate) {
+      setDataInicio(selectedDate);
+    }
+  };
+
+  const onChangeDataFim = (event: any, selectedDate?: Date) => {
+    setShowPickerFim(false); // Esconde o calendário
+    if (selectedDate) {
+      setDataFim(selectedDate);
+    }
+  };
 
   const renderItem = ({ item }: { item: HistoricoItem }) => (
     <View style={[styles.pedidoCard, item.status === 'Cancelado' && styles.cardCancelado]}>
@@ -49,9 +83,30 @@ export default function HistoricoPedidosScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ title: 'Histórico de Pedidos' }} />
+      <Text style={styles.titulo}>Histórico de Pedidos</Text>
+      
+      {/* NOVO: Seção com os botões de filtro */}
+      <View style={styles.filtroContainer}>
+        <View style={styles.datePickerButton}>
+            <Button onPress={() => setShowPickerInicio(true)} title={`Início: ${dataInicio.toLocaleDateString('pt-BR')}`} />
+        </View>
+        <View style={styles.datePickerButton}>
+            <Button onPress={() => setShowPickerFim(true)} title={`Fim: ${dataFim.toLocaleDateString('pt-BR')}`} />
+        </View>
+      </View>
+      <Button onPress={buscarHistoricoFiltrado} title="Filtrar Pedidos" color="#007BFF" />
+
+      {/* NOVO: Renderização condicional dos calendários */}
+      {showPickerInicio && (
+        <DateTimePicker value={dataInicio} mode="date" display="default" onChange={onChangeDataInicio} />
+      )}
+      {showPickerFim && (
+        <DateTimePicker value={dataFim} mode="date" display="default" onChange={onChangeDataFim} />
+      )}
+
       {loading ? (
         <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007BFF" />
+          <ActivityIndicator size="large" color="#007BFF" />
         </View>
       ) : (
         <FlatList
@@ -59,21 +114,31 @@ export default function HistoricoPedidosScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           style={styles.lista}
-          ListHeaderComponent={<Text style={styles.titulo}>Histórico de Pedidos</Text>}
-          ListEmptyComponent={<Text style={styles.textoVazio}>Nenhum pedido no histórico.</Text>}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          ListEmptyComponent={<Text style={styles.textoVazio}>Nenhum pedido para exibir. Use o filtro acima.</Text>}
+          contentContainerStyle={{ paddingTop: 20 }}
         />
       )}
     </SafeAreaView>
   );
 }
 
+// NOVO: Adicionado alguns estilos para os filtros
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8f9fa' },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 20 },
     titulo: { fontSize: 28, fontWeight: 'bold', textAlign: 'center', marginVertical: 20 },
+    filtroContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginBottom: 16,
+        paddingHorizontal: 15,
+    },
+    datePickerButton: {
+        flex: 1,
+        marginHorizontal: 5,
+    },
     lista: { width: '100%', paddingHorizontal: 15 },
-    pedidoCard: { backgroundColor: '#fff', borderRadius: 12, padding: 20, marginBottom: 15, elevation: 2 },
+    pedidoCard: { backgroundColor: '#fff', borderRadius: 12, padding: 20, marginBottom: 15, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.22, shadowRadius: 2.22 },
     cardCancelado: { backgroundColor: '#fff0f0' },
     clienteNome: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
     pedidoDetalhe: { fontSize: 15, color: '#333', marginBottom: 5 },

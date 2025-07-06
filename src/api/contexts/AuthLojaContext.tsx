@@ -1,19 +1,21 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// --- PASSO 1: Importar o nosso novo hook de notificações ---
 import { usePushNotifications } from '../../hooks/usePushNotifications';
+import api from '../api'; // Importamos a instância do axios
 
 // Define o formato do objeto da loja logada
 interface AuthLoja {
   id: number;
   nome_loja: string;
   email_login: string;
+  // Adicione outras propriedades da loja que você queira ter acesso fácil
 }
 
 // Define o que o contexto vai fornecer
 interface AuthLojaContextData {
   loja: AuthLoja | null;
-  login: (lojaData: AuthLoja) => Promise<void>;
+  token: string | null; // NOVO: Adicionamos o token aqui
+  login: (lojaData: AuthLoja, token: string) => Promise<void>; // MUDANÇA: A função de login agora também recebe o token
   logout: () => Promise<void>;
   loading: boolean;
   updateLojaContext: (updatedData: Partial<AuthLoja>) => Promise<void>;
@@ -23,34 +25,50 @@ const AuthLojaContext = createContext<AuthLojaContextData>({} as AuthLojaContext
 
 export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   const [loja, setLoja] = useState<AuthLoja | null>(null);
+  const [token, setToken] = useState<string | null>(null); // NOVO: Criamos um estado para guardar o token
   const [loading, setLoading] = useState(true);
 
-  // --- PASSO 2: Usar o nosso hook de notificações ---
-  // O hook é ativado automaticamente sempre que o 'loja.id' estiver disponível,
-  // ou seja, logo após o login.
   usePushNotifications(loja?.id);
 
-  // Carrega os dados da loja do armazenamento local ao iniciar
+  // Carrega os dados da loja e o token do armazenamento local ao iniciar
   useEffect(() => {
     async function loadStorageData() {
       const storedLoja = await AsyncStorage.getItem('@AppLojista:loja');
-      if (storedLoja) {
+      const storedToken = await AsyncStorage.getItem('@AppLojista:token'); // NOVO: Carregamos o token guardado
+
+      if (storedLoja && storedToken) {
         setLoja(JSON.parse(storedLoja));
+        setToken(storedToken);
+        // NOVO: Configuramos o token no cabeçalho do axios
+        api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       }
       setLoading(false);
     }
     loadStorageData();
   }, []);
 
-  const login = async (lojaData: AuthLoja) => {
+  const login = async (lojaData: AuthLoja, authToken: string) => {
     setLoja(lojaData);
+    setToken(authToken); // NOVO: Guardamos o token no estado
+    
+    // NOVO: Configuramos o token no cabeçalho do axios para todas as futuras requisições
+    api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+
+    // Guardamos ambos no armazenamento local
     await AsyncStorage.setItem('@AppLojista:loja', JSON.stringify(lojaData));
+    await AsyncStorage.setItem('@AppLojista:token', authToken);
   };
 
   const logout = async () => {
-    // Futuramente, aqui também podemos adicionar a lógica para remover o push token do backend
     setLoja(null);
+    setToken(null); // NOVO: Limpamos o token do estado
+    
+    // NOVO: Removemos o token do cabeçalho do axios
+    delete api.defaults.headers.common['Authorization'];
+    
+    // Removemos ambos do armazenamento local
     await AsyncStorage.removeItem('@AppLojista:loja');
+    await AsyncStorage.removeItem('@AppLojista:token');
   };
 
   const updateLojaContext = async (updatedData: Partial<AuthLoja>) => {
@@ -63,7 +81,8 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthLojaContext.Provider value={{ loja, login, logout, loading, updateLojaContext }}>
+    // NOVO: Fornecemos o token para todo o aplicativo
+    <AuthLojaContext.Provider value={{ loja, token, login, logout, loading, updateLojaContext }}>
       {children}
     </AuthLojaContext.Provider>
   );

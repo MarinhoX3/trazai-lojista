@@ -2,36 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, SafeAreaView, ActivityIndicator, Image, Pressable, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as Linking from 'expo-linking';
 import api from '../src/api/api'; 
 import { useAuthLoja } from '../src/api/contexts/AuthLojaContext'; 
 
 export default function EditLojaScreen() {
   const router = useRouter();
-  const { loja, updateLojaContext, logout } = useAuthLoja();
+  // --- CORREÇÃO FINAL ---
+  // Agora que o nosso contexto fornece o token, podemos obtê-lo diretamente aqui.
+  const { loja, token, updateLojaContext, logout } = useAuthLoja();
 
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
   const [endereco, setEndereco] = useState('');
   const [logo, setLogo] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [logoAtualUrl, setLogoAtualUrl] = useState<string | null>(null);
-  // Iniciamos o loading como true para mostrar o indicador enquanto os dados são buscados.
   const [loading, setLoading] = useState(true);
+  const [stripeLoading, setStripeLoading] = useState(false);
 
-  // Este useEffect é responsável por buscar e preencher os dados da loja.
   useEffect(() => {
-    // Se não houver loja no contexto, não fazemos nada e paramos o loading.
     if (!loja?.id) {
         setLoading(false);
-        // Adicionamos um alerta para informar o utilizador do problema.
-        Alert.alert("Erro", "Não foi possível carregar os dados da loja. Por favor, tente fazer login novamente.");
+        // Não mostramos alerta aqui, pois o loading=false vai mostrar a tela de login se não houver loja
         return;
     };
 
     const fetchLojaData = async () => {
       try {
+        // A autenticação já está no cabeçalho do axios graças ao nosso contexto
         const response = await api.get(`/lojas/${loja.id}`);
         const { nome_loja, telefone_contato, endereco_loja, url_logo } = response.data;
-        // Preenchemos os campos do formulário com os dados recebidos da API.
         setNome(nome_loja || '');
         setTelefone(telefone_contato || '');
         setEndereco(endereco_loja || '');
@@ -39,12 +39,12 @@ export default function EditLojaScreen() {
       } catch (error) {
         Alert.alert("Erro", "Não foi possível carregar os dados da sua loja para edição.");
       } finally {
-        setLoading(false); // Paramos o loading após a busca (com sucesso ou erro).
+        setLoading(false);
       }
     };
     
     fetchLojaData();
-  }, [loja?.id]); // A busca é executada sempre que o ID da loja estiver disponível.
+  }, [loja?.id]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -82,6 +82,7 @@ export default function EditLojaScreen() {
     }
     
     try {
+      // O token já está a ser enviado automaticamente pelo axios
       await api.put(`/lojas/${loja.id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -97,6 +98,34 @@ export default function EditLojaScreen() {
     } catch (error) {
       console.error(error);
       Alert.alert('Erro', 'Não foi possível atualizar os dados da loja.');
+    }
+  };
+
+  const handleConnectStripe = async () => {
+    if (!loja || !token) {
+      Alert.alert("Erro", "Não foi possível identificar os dados de autenticação da sua loja.");
+      return;
+    }
+    setStripeLoading(true);
+    try {
+      // A autenticação já está no cabeçalho do axios
+      const response = await api.post('/lojas/criar-link-stripe', { id_loja: loja.id });
+
+      const { url } = response.data;
+      const supported = await Linking.canOpenURL(url);
+
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert("Erro", `Não foi possível abrir o link: ${url}`);
+      }
+
+    } catch (error: any) {
+      console.error("Erro ao iniciar cadastro Stripe:", error);
+      const mensagem = error.response?.data?.message || "Ocorreu um erro. Tente novamente.";
+      Alert.alert("Erro", mensagem);
+    } finally {
+      setStripeLoading(false);
     }
   };
 
@@ -144,6 +173,18 @@ export default function EditLojaScreen() {
           <Button title="Salvar Alterações" onPress={handleUpdate} />
         </View>
 
+        <View style={styles.divider} />
+        <Text style={styles.sectionTitle}>Pagamentos Online</Text>
+        <Text style={styles.sectionDescription}>
+          Conecte-se à nossa plataforma para começar a receber pagamentos online com segurança.
+        </Text>
+        <Button 
+          title={stripeLoading ? "Aguarde..." : "Configurar Pagamentos"} 
+          onPress={handleConnectStripe} 
+          disabled={stripeLoading}
+          color="#6772E5"
+        />
+
         <View style={styles.logoutButtonContainer}>
             <Button title="Sair (Logout)" color="red" onPress={handleLogout} />
         </View>
@@ -161,6 +202,24 @@ const styles = StyleSheet.create({
   imagePickerText: { textAlign: 'center', color: '#007BFF' },
   label: { fontSize: 16, fontWeight: '600', marginBottom: 5, color: '#333' },
   input: { height: 50, borderColor: '#ccc', borderWidth: 1, borderRadius: 8, marginBottom: 20, paddingHorizontal: 15, fontSize: 16 },
-  buttonContainer: { marginTop: 20 },
-  logoutButtonContainer: { marginTop: 30 },
+  buttonContainer: { marginTop: 10 },
+  divider: {
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    marginVertical: 30,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 20,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  logoutButtonContainer: { marginTop: 30, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#eee' },
 });

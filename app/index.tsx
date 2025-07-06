@@ -27,7 +27,7 @@ export default function LoginScreen() {
         senha: senha
       });
 
-      await login(response.data.loja);
+      await login(response.data.loja, response.data.token);
       router.replace("/dashboard");
 
     } catch (error: any) {

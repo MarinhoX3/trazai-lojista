@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Pressable, ScrollView, Alert } from 'react-native';
+// NOVO: Importa Linking para abrir URLs e TouchableOpacity para feedback de clique
+import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Pressable, ScrollView, Alert, TouchableOpacity, Linking } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import api from '../src/api/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,8 +22,6 @@ interface PedidoDetalhes {
   telefone_cliente: string;
   itens: ItemDoPedido[];
 }
-
-const STATUS_FLUXO = ['Recebido', 'Preparando', 'A caminho', 'Finalizado'];
 
 export default function DetalhesPedidoScreen() {
   const router = useRouter();
@@ -54,15 +53,30 @@ export default function DetalhesPedidoScreen() {
     if (!pedido) return;
     try {
         await api.put(`/pedidos/${pedido.id}/status`, { status: novoStatus });
+        Alert.alert("Sucesso!", `O pedido foi marcado como "${novoStatus}".`);
         // Atualiza o status na tela localmente
         setPedido(pedidoAtual => pedidoAtual ? { ...pedidoAtual, status: novoStatus } : null);
-        // Se o pedido for finalizado, podemos navegar de volta
-        if (novoStatus === 'Finalizado') {
-            Alert.alert("Sucesso", "Pedido finalizado!", [{ text: "OK", onPress: () => router.back() }]);
+        
+        if (novoStatus === 'Finalizado' || novoStatus === 'Cancelado') {
+            router.back(); // Volta para a tela anterior
         }
     } catch (error) {
         console.error("Erro ao atualizar status:", error);
-        alert('Não foi possível atualizar o status do pedido.');
+        Alert.alert('Erro', 'Não foi possível atualizar o status do pedido.');
+    }
+  };
+
+  // NOVO: Funções interativas para ligar e abrir mapa
+  const ligarParaCliente = () => {
+    if (pedido?.telefone_cliente) {
+      Linking.openURL(`tel:${pedido.telefone_cliente}`);
+    }
+  };
+
+  const abrirNoMapa = () => {
+    if (pedido?.endereco_entrega) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pedido.endereco_entrega)}`;
+      Linking.openURL(url);
     }
   };
 
@@ -74,9 +88,6 @@ export default function DetalhesPedidoScreen() {
   if (!pedido) {
     return <View style={styles.loadingContainer}><Text>Pedido não encontrado.</Text></View>;
   }
-
-  const statusAtualIndex = STATUS_FLUXO.indexOf(pedido.status);
-  const proximoStatus = STATUS_FLUXO[statusAtualIndex + 1];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -90,17 +101,19 @@ export default function DetalhesPedidoScreen() {
                 <Ionicons name="person-outline" size={18} color="#555" />
                 <Text style={styles.detailText}>{pedido.nome_cliente}</Text>
             </View>
-            <View style={styles.detailRow}>
-                <Ionicons name="call-outline" size={18} color="#555" />
-                <Text style={styles.detailText}>{pedido.telefone_cliente}</Text>
-            </View>
-            <View style={styles.detailRow}>
-                <Ionicons name="home-outline" size={18} color="#555" />
-                <Text style={styles.detailText}>{pedido.endereco_entrega}</Text>
-            </View>
+            {/* NOVO: TouchableOpacity para tornar o telefone clicável */}
+            <TouchableOpacity onPress={ligarParaCliente} style={styles.detailRow}>
+                <Ionicons name="call-outline" size={18} color="#007BFF" />
+                <Text style={[styles.detailText, styles.linkText]}>{pedido.telefone_cliente}</Text>
+            </TouchableOpacity>
+            {/* NOVO: TouchableOpacity para tornar o endereço clicável */}
+            <TouchableOpacity onPress={abrirNoMapa} style={styles.detailRow}>
+                <Ionicons name="home-outline" size={18} color="#007BFF" />
+                <Text style={[styles.detailText, styles.linkText]}>{pedido.endereco_entrega}</Text>
+            </TouchableOpacity>
         </View>
 
-        {/* Seção de Itens do Pedido */}
+        {/* Seção de Itens do Pedido (sem alterações) */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Itens do Pedido</Text>
             {pedido.itens.map((item, index) => (
@@ -112,24 +125,41 @@ export default function DetalhesPedidoScreen() {
             ))}
         </View>
 
-        {/* Seção do Total */}
+        {/* Seção do Total (sem alterações) */}
         <View style={styles.totalContainer}>
             <Text style={styles.totalLabel}>Total do Pedido:</Text>
             <Text style={styles.totalValue}>R$ {parseFloat(pedido.valor_total).toFixed(2)}</Text>
         </View>
 
-        {/* Seção de Ações */}
+        {/* NOVO: Seção de Ações com botões mais explícitos */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Gerir Pedido</Text>
             <View style={styles.statusContainer}>
                 <Text style={styles.pedidoStatus}>Status Atual: {pedido.status}</Text>
             </View>
-            {proximoStatus && (
-                 <Pressable 
-                    style={styles.actionButton} 
-                    onPress={() => handleAtualizarStatus(proximoStatus)}>
-                    <Text style={styles.actionButtonText}>Mover para "{proximoStatus}"</Text>
-                 </Pressable>
+            
+            {/* Botões de Ação Condicionais */}
+            {pedido.status === 'Recebido' && (
+                <Pressable style={styles.actionButton} onPress={() => handleAtualizarStatus('Preparando')}>
+                    <Text style={styles.actionButtonText}>Marcar como "Preparando"</Text>
+                </Pressable>
+            )}
+            {pedido.status === 'Preparando' && (
+                <Pressable style={styles.actionButton} onPress={() => handleAtualizarStatus('A caminho')}>
+                    <Text style={styles.actionButtonText}>Marcar como "A caminho"</Text>
+                </Pressable>
+            )}
+            {pedido.status === 'A caminho' && (
+                <Pressable style={[styles.actionButton, styles.finalizarButton]} onPress={() => handleAtualizarStatus('Finalizado')}>
+                    <Text style={styles.actionButtonText}>Finalizar Pedido</Text>
+                </Pressable>
+            )}
+
+            {/* Botão de Cancelar (aparece se o pedido não estiver finalizado/cancelado) */}
+            {pedido.status !== 'Finalizado' && pedido.status !== 'Cancelado' && (
+                <Pressable style={[styles.actionButton, styles.cancelarButton]} onPress={() => handleAtualizarStatus('Cancelado')}>
+                    <Text style={styles.actionButtonText}>Cancelar Pedido</Text>
+                </Pressable>
             )}
         </View>
 
@@ -165,6 +195,11 @@ const styles = StyleSheet.create({
     detailText: {
         fontSize: 16,
         marginLeft: 10,
+        flex: 1, // Permite que o texto quebre a linha se for muito longo
+    },
+    // NOVO: Estilo para os links clicáveis
+    linkText: {
+        color: '#007BFF',
     },
     itemRow: {
         flexDirection: 'row',
@@ -220,10 +255,18 @@ const styles = StyleSheet.create({
         color: '#005a9c',
     },
     actionButton: {
-        backgroundColor: '#28a745',
-        padding: 12,
+        backgroundColor: '#007BFF',
+        padding: 15,
         borderRadius: 8,
         alignItems: 'center',
+        marginBottom: 10,
+    },
+    // NOVO: Estilos específicos para os botões
+    finalizarButton: {
+        backgroundColor: '#28a745', // Verde
+    },
+    cancelarButton: {
+        backgroundColor: '#dc3545', // Vermelho
     },
     actionButtonText: {
         color: '#fff',

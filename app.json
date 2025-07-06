@@ -19,7 +19,8 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.adriano_marinho.trazailojista"
+      "package": "com.adriano_marinho.trazailojista",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/icon.png"
