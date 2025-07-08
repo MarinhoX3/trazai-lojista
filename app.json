@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "scheme": "trazailojista",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/logo.png",
@@ -20,7 +21,10 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.adriano_marinho.trazailojista",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/icon.png"

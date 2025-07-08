@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, Pressable, Image, ActivityIndicator } from 'react-native';
-// --- CORREÇÃO 1: Caminhos de importação ajustados ---
 import api from '../src/api/api';
 import { useRouter, Link, Stack } from 'expo-router';
 import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
@@ -31,8 +30,11 @@ export default function LoginScreen() {
       router.replace("/dashboard");
 
     } catch (error: any) {
-      const mensagemErro = error.response?.data?.message || 'Não foi possível conectar ao servidor.';
-      Alert.alert('Erro no Login', mensagemErro);
+      // --- MUDANÇA DE DIAGNÓSTICO ---
+      // Vamos mostrar o objeto de erro completo para descobrirmos a causa raiz.
+      const detailedError = JSON.stringify(error);
+      Alert.alert('Erro Detalhado de Rede', detailedError);
+
     } finally {
         setLoading(false);
     }
@@ -46,7 +48,6 @@ export default function LoginScreen() {
         style={styles.logo}
       />
       <Text style={styles.titulo}>Bem-vindo!</Text>
-      {/* --- CORREÇÃO 2: Texto "Lojista" adicionado --- */}
       <Text style={styles.tituloLojista}>Lojista</Text>
       <Text style={styles.subtitulo}>Faça seu login para continuar</Text>
 
@@ -88,6 +89,7 @@ export default function LoginScreen() {
   );
 }
 
+// Seus estilos continuam aqui...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
