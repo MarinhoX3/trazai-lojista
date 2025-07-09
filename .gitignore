@@ -37,3 +37,7 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# --- CORREÇÃO: Comentamos as linhas abaixo para incluir as pastas na compilação ---
+# /android
+# /ios

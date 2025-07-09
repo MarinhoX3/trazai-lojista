@@ -30,10 +30,10 @@ export default function LoginScreen() {
       router.replace("/dashboard");
 
     } catch (error: any) {
-      // --- MUDANÇA DE DIAGNÓSTICO ---
-      // Vamos mostrar o objeto de erro completo para descobrirmos a causa raiz.
-      const detailedError = JSON.stringify(error);
-      Alert.alert('Erro Detalhado de Rede', detailedError);
+      // --- MUDANÇA FINAL DE DIAGNÓSTICO ---
+      // Vamos tentar mostrar as propriedades do erro para encontrar a causa.
+      const errorMessage = `Name: ${error.name}\nMessage: ${error.message}\nStack: ${error.stack}`;
+      Alert.alert('Erro Detalhado de Rede', errorMessage);
 
     } finally {
         setLoading(false);
