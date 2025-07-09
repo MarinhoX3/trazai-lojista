@@ -38,6 +38,7 @@ yarn-error.*
 
 app-example
 
-# --- CORREÇÃO: Comentamos as linhas abaixo para incluir as pastas na compilação ---
-# /android
-# /ios
+# CORREÇÃO: Removemos os comentários para que o Git ignore as pastas nativas,
+# conforme recomendado pelo expo doctor.
+/android
+/ios
