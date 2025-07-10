@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, Image, Pressable, Platform, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import api from '../src/api/api';
+import api, { ASSET_BASE_URL } from '../src/api/api';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function EditProductScreen() {
@@ -98,7 +98,7 @@ export default function EditProductScreen() {
     );
   };
 
-  const displayImageUri = novaImagem?.uri || (imagemAtualUrl ? `${api.defaults.baseURL}/${imagemAtualUrl}?t=${new Date().getTime()}` : 'https://placehold.co/200x200/e2e8f0/e2e8f0?text=Img');
+  const displayImageUri = novaImagem?.uri || (imagemAtualUrl ? `${ASSET_BASE_URL}/${imagemAtualUrl}?t=${new Date().getTime()}` : 'https://placehold.co/200x200/e2e8f0/e2e8f0?text=Img');
 
   return (
     <SafeAreaView style={styles.container}>

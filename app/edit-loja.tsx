@@ -3,7 +3,7 @@ import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, SafeAreaV
 import { Stack, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
-import api from '../src/api/api'; 
+import api, { ASSET_BASE_URL } from '../src/api/api';
 import { useAuthLoja } from '../src/api/contexts/AuthLojaContext'; 
 
 export default function EditLojaScreen() {
@@ -147,7 +147,7 @@ export default function EditLojaScreen() {
     return <View style={styles.container}><ActivityIndicator size="large" /></View>;
   }
 
-  const displayImageUri = logo?.uri || (logoAtualUrl ? `${api.defaults.baseURL}/${logoAtualUrl}?t=${new Date().getTime()}` : 'https://placehold.co/150x150/e2e8f0/e2e8f0?text=Logo');
+  const displayImageUri = logo?.uri || (logoAtualUrl ? `${ASSET_BASE_URL}/${logoAtualUrl}?t=${new Date().getTime()}` : 'https://placehold.co/150x150/e2e8f0/e2e8f0?text=Logo');
 
   return (
     <SafeAreaView style={styles.container}>
