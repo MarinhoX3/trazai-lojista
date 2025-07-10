@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "traz-ai-lojista",
+    "name": "TrazAi-Loja",
     "slug": "traz-ai-lojista",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,7 +18,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.adriano_marinho.trazailojista",
-      "versionCode": 5
+      "versionCode": 6
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +35,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

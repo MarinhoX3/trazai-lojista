@@ -14,13 +14,13 @@
         "simulator": true
       }
     },
-    "preview": {
+      "preview": {
       "distribution": "internal",
       "environment": "preview",
       "android": {
-        "buildType": "app-bundle"
+      "buildType": "apk" 
       }
-    },
+   },
     "production": {
       "distribution": "store",
       "environment": "production",
