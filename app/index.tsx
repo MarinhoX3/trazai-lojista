@@ -51,15 +51,16 @@ export default function LoginScreen() {
       <Text style={styles.tituloLojista}>Lojista</Text>
       <Text style={styles.subtitulo}>Faça seu login para continuar</Text>
 
-      <TextInput style={styles.input} placeholder="Digite seu e-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#888" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
       
       <View style={styles.passwordContainer}>
         <TextInput 
-          style={styles.inputPassword} 
-          placeholder="Digite sua senha" 
-          value={senha} 
-          onChangeText={setSenha} 
-          secureTextEntry={!isPasswordVisible} 
+         style={styles.inputPassword} 
+         placeholder="Digite sua senha" 
+         placeholderTextColor="#888"
+         value={senha} 
+         onChangeText={setSenha} 
+         secureTextEntry={!isPasswordVisible} 
         />
         <Pressable onPress={() => setIsPasswordVisible(!isPasswordVisible)} style={styles.eyeIcon}>
             <Ionicons 
