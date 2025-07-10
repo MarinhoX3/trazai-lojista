@@ -37,8 +37,4 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
-
-# CORREÇÃO: Removemos os comentários para que o Git ignore as pastas nativas,
-# conforme recomendado pelo expo doctor.
-/android
-/ios
+trazai-app-firebase-adminsdk-fbsvc-fa364144e0.json
