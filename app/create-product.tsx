@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, Image, Pressable, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { 
+  View, Text, TextInput, Button, StyleSheet, Alert, 
+  ScrollView, Image, Pressable, Platform, SafeAreaView, 
+  KeyboardAvoidingView, ActivityIndicator 
+} from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import api from '../src/api/api';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -14,6 +18,7 @@ export default function CreateProductScreen() {
   const [unidade, setUnidade] = useState('UN');
   const [estoque, setEstoque] = useState('');
   const [imagem, setImagem] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [isSaving, setIsSaving] = useState(false); // Estado para o loading do botão Salvar
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -24,7 +29,6 @@ export default function CreateProductScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
       quality: 1,
     });
     if (!result.canceled) {
@@ -38,8 +42,9 @@ export default function CreateProductScreen() {
       return;
     }
 
-    const formData = new FormData();
+    setIsSaving(true);
 
+    const formData = new FormData();
     formData.append('id_loja', String(lojaId));
     formData.append('nome', nome);
     formData.append('descricao', descricao);
@@ -52,7 +57,9 @@ export default function CreateProductScreen() {
       const uriParts = uri.split('.');
       const fileType = uriParts[uriParts.length - 1];
 
-      formData.append('foto_produto', {
+      // --- AQUI ESTÁ A CORREÇÃO ---
+      // O nome do campo foi alterado de 'foto_produto' para 'foto' para corresponder ao backend.
+      formData.append('foto', {
         uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
         name: `photo.${fileType}`,
         type: `image/${fileType}`,
@@ -71,40 +78,56 @@ export default function CreateProductScreen() {
       ]);
 
     } catch (error: any) {
+      console.error("Erro ao criar produto:", error.response?.data || error.message);
       const mensagemErro = error.response?.data?.message || 'Não foi possível cadastrar o produto.';
       Alert.alert('Erro', mensagemErro);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.titulo}>Adicionar Novo Produto</Text>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: "Adicionar Novo Produto" }} />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Text style={styles.titulo}>Adicionar Novo Produto</Text>
 
-      <Pressable style={styles.botaoImagem} onPress={pickImage}>
-        <Text style={styles.botaoTexto}>Selecionar Imagem</Text>
-      </Pressable>
+          <Pressable style={styles.botaoImagem} onPress={pickImage}>
+            <Text style={styles.botaoTexto}>Selecionar Imagem</Text>
+          </Pressable>
 
-      {imagem && <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />}
+          {imagem && <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />}
 
-      <TextInput style={styles.input} placeholder="Nome do Produto *" placeholderTextColor="#888" value={nome} onChangeText={setNome} />
-      <TextInput style={styles.input} placeholder="Descrição" placeholderTextColor="#888" value={descricao} onChangeText={setDescricao} />
-      <TextInput style={styles.input} placeholder="Preço (ex: 10.99) *" placeholderTextColor="#888" value={preco} onChangeText={setPreco} keyboardType="numeric" />
-      <TextInput style={styles.input} placeholder="Estoque (ex: 50)" placeholderTextColor="#888" value={estoque} onChangeText={setEstoque} keyboardType="numeric" />
-      <TextInput style={styles.input} placeholder="Unidade de Venda (UN, KG, etc) *" placeholderTextColor="#888" value={unidade} onChangeText={setUnidade} />
-      
-      <View style={styles.buttonContainer}>
-        <Button title="Salvar Produto" onPress={handleCreateProduct} />
-      </View>
-    </ScrollView>
+          <TextInput style={styles.input} placeholder="Nome do Produto *" placeholderTextColor="#888" value={nome} onChangeText={setNome} />
+          <TextInput style={styles.input} placeholder="Descrição" placeholderTextColor="#888" value={descricao} onChangeText={setDescricao} multiline />
+          <TextInput style={styles.input} placeholder="Preço (ex: 10.99) *" placeholderTextColor="#888" value={preco} onChangeText={setPreco} keyboardType="numeric" />
+          <TextInput style={styles.input} placeholder="Estoque (ex: 50)" placeholderTextColor="#888" value={estoque} onChangeText={setEstoque} keyboardType="numeric" />
+          <TextInput style={styles.input} placeholder="Unidade de Venda (UN, KG, etc) *" placeholderTextColor="#888" value={unidade} onChangeText={setUnidade} />
+          
+          <View style={styles.buttonContainer}>
+            {isSaving ? (
+              <ActivityIndicator size="large" color="#007BFF" />
+            ) : (
+              <Button title="Salvar Produto" onPress={handleCreateProduct} />
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#fff' },
+  scrollContent: { flexGrow: 1, padding: 20 },
   titulo: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
   input: { height: 50, borderColor: '#ccc', borderWidth: 1, borderRadius: 8, marginBottom: 15, paddingHorizontal: 15, backgroundColor: '#fff', fontSize: 16 },
   botaoImagem: { backgroundColor: '#5bc0de', padding: 15, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
   botaoTexto: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   imagemPreview: { width: '100%', height: 200, borderRadius: 8, marginBottom: 15, backgroundColor: '#eee' },
-  buttonContainer: { marginTop: 10 },
+  buttonContainer: { marginTop: 10, height: 40, justifyContent: 'center' },
 });
