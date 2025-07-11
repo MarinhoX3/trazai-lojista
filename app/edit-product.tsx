@@ -24,12 +24,10 @@ export default function EditProductScreen() {
       setPreco(product.preco || '');
       setImagemAtualUrl(product.url_foto || null);
       
-      // --- AQUI ESTÁ A CORREÇÃO ---
-      // Formatamos o valor do estoque para remover as casas decimais
       const estoqueFormatado = product.estoque ? parseInt(product.estoque, 10).toString() : '';
       setEstoque(estoqueFormatado);
     }
-  }, [product]);
+  }, []); // <-- AQUI ESTÁ A CORREÇÃO: Um array vazio faz com que este efeito execute apenas uma vez.
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -38,7 +36,7 @@ export default function EditProductScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Mantido para compatibilidade
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -61,7 +59,6 @@ export default function EditProductScreen() {
       const uri = novaImagem.uri;
       const uriParts = uri.split('.');
       const fileType = uriParts[uriParts.length - 1];
-      // O backend espera o campo 'foto' para produtos.
       formData.append('foto', {
         uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
         name: `photo.${fileType}`,
@@ -112,16 +109,16 @@ export default function EditProductScreen() {
         </Pressable>
 
         <Text style={styles.label}>Nome do Produto</Text>
-        <TextInput style={styles.input} value={nome} onChangeText={setNome} />
+        <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Nome do Produto" placeholderTextColor="#888" />
 
         <Text style={styles.label}>Descrição</Text>
-        <TextInput style={styles.input} value={descricao} onChangeText={setDescricao} multiline/>
+        <TextInput style={styles.input} value={descricao} onChangeText={setDescricao} multiline placeholder="Descrição do Produto" placeholderTextColor="#888" />
         
         <Text style={styles.label}>Preço (R$)</Text>
-        <TextInput style={styles.input} value={preco} onChangeText={setPreco} keyboardType="numeric" />
+        <TextInput style={styles.input} value={preco} onChangeText={setPreco} keyboardType="numeric" placeholder="0,00" placeholderTextColor="#888" />
         
         <Text style={styles.label}>Estoque</Text>
-        <TextInput style={styles.input} value={estoque} onChangeText={setEstoque} keyboardType="numeric" />
+        <TextInput style={styles.input} value={estoque} onChangeText={setEstoque} keyboardType="numeric" placeholder="Quantidade em estoque" placeholderTextColor="#888" />
 
         <View style={styles.buttonContainer}>
           <Button title="Salvar Alterações" onPress={handleUpdate} />

@@ -30,11 +30,16 @@ export default function LoginScreen() {
       router.replace("/dashboard");
 
     } catch (error: any) {
-      // --- MUDANÇA FINAL DE DIAGNÓSTICO ---
-      // Vamos tentar mostrar as propriedades do erro para encontrar a causa.
-      const errorMessage = `Name: ${error.name}\nMessage: ${error.message}\nStack: ${error.stack}`;
-      Alert.alert('Erro Detalhado de Rede', errorMessage);
-
+      // --- BLOCO DE ERRO CORRIGIDO ---
+      // Verificamos se o erro tem uma resposta do servidor.
+      if (error.response && error.response.data && error.response.data.message) {
+        // Se tiver, mostramos a mensagem de erro que o nosso backend enviou (ex: "E-mail ou senha inválidos.").
+        Alert.alert('Erro no Login', error.response.data.message);
+      } else {
+        // Se for um erro de rede ou outro problema, mostramos uma mensagem genérica.
+        Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua internet.');
+      }
+      // --- FIM DA CORREÇÃO ---
     } finally {
         setLoading(false);
     }
@@ -51,16 +56,24 @@ export default function LoginScreen() {
       <Text style={styles.tituloLojista}>Lojista</Text>
       <Text style={styles.subtitulo}>Faça seu login para continuar</Text>
 
-      <TextInput style={styles.input} placeholder="Digite seu e-mail" placeholderTextColor="#888" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <TextInput 
+        style={styles.input} 
+        placeholder="Digite seu e-mail" 
+        placeholderTextColor="#888"
+        value={email} 
+        onChangeText={setEmail} 
+        keyboardType="email-address" 
+        autoCapitalize="none" 
+      />
       
       <View style={styles.passwordContainer}>
         <TextInput 
-         style={styles.inputPassword} 
-         placeholder="Digite sua senha" 
-         placeholderTextColor="#888"
-         value={senha} 
-         onChangeText={setSenha} 
-         secureTextEntry={!isPasswordVisible} 
+          style={styles.inputPassword} 
+          placeholder="Digite sua senha" 
+          placeholderTextColor="#888"
+          value={senha} 
+          onChangeText={setSenha} 
+          secureTextEntry={!isPasswordVisible} 
         />
         <Pressable onPress={() => setIsPasswordVisible(!isPasswordVisible)} style={styles.eyeIcon}>
             <Ionicons 

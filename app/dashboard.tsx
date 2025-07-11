@@ -70,8 +70,6 @@ export default function DashboardScreen() {
         <View style={styles.produtoContainer}>
           <Text style={styles.produtoNome}>{item.nome}</Text>
           <Text>Preço: R$ {item.preco}</Text>
-          {/* --- AQUI ESTÁ A CORREÇÃO --- */}
-          {/* Usamos parseInt para remover as casas decimais e adicionamos "und" */}
           <Text>Estoque: {parseInt(item.estoque)} und</Text>
         </View>
       </Pressable>
@@ -94,6 +92,7 @@ export default function DashboardScreen() {
         <TextInput
           style={styles.barraBusca}
           placeholder="Buscar produto pelo nome..."
+          placeholderTextColor="#888"
           value={termoBusca}
           onChangeText={setTermoBusca}
         />

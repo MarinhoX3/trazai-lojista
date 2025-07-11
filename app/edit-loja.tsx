@@ -8,8 +8,6 @@ import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 
 export default function EditLojaScreen() {
   const router = useRouter();
-  // --- CORREÇÃO FINAL ---
-  // Agora que o nosso contexto fornece o token, podemos obtê-lo diretamente aqui.
   const { loja, token, updateLojaContext, logout } = useAuthLoja();
 
   const [nome, setNome] = useState('');
@@ -23,13 +21,11 @@ export default function EditLojaScreen() {
   useEffect(() => {
     if (!loja?.id) {
         setLoading(false);
-        // Não mostramos alerta aqui, pois o loading=false vai mostrar a tela de login se não houver loja
         return;
     };
 
     const fetchLojaData = async () => {
       try {
-        // A autenticação já está no cabeçalho do axios graças ao nosso contexto
         const response = await api.get(`/lojas/${loja.id}`);
         const { nome_loja, telefone_contato, endereco_loja, url_logo } = response.data;
         setNome(nome_loja || '');
@@ -82,7 +78,6 @@ export default function EditLojaScreen() {
     }
     
     try {
-      // O token já está a ser enviado automaticamente pelo axios
       await api.put(`/lojas/${loja.id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -108,7 +103,6 @@ export default function EditLojaScreen() {
     }
     setStripeLoading(true);
     try {
-      // A autenticação já está no cabeçalho do axios
       const response = await api.post('/lojas/criar-link-stripe', { id_loja: loja.id });
 
       const { url } = response.data;
@@ -161,13 +155,13 @@ export default function EditLojaScreen() {
         </Pressable>
         
         <Text style={styles.label}>Nome da Loja</Text>
-        <TextInput style={styles.input} value={nome} onChangeText={setNome} />
+        <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Nome da sua loja" placeholderTextColor="#888"/>
         
         <Text style={styles.label}>Telefone de Contato</Text>
-        <TextInput style={styles.input} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
+        <TextInput style={styles.input} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="(XX) XXXXX-XXXX" placeholderTextColor="#888"/>
         
         <Text style={styles.label}>Endereço da Loja</Text>
-        <TextInput style={styles.input} value={endereco} onChangeText={setEndereco} multiline />
+        <TextInput style={styles.input} value={endereco} onChangeText={setEndereco} multiline placeholder="Rua, Número, Bairro, Cidade" placeholderTextColor="#888"/>
 
         <View style={styles.buttonContainer}>
           <Button title="Salvar Alterações" onPress={handleUpdate} />
