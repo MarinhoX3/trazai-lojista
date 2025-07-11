@@ -45,12 +45,12 @@ export default function RegisterScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.titulo}>Cadastro da Loja</Text>
 
-      <TextInput style={styles.input} placeholder="Nome da Loja *" value={nomeLoja} onChangeText={setNomeLoja} />
-      <TextInput style={styles.input} placeholder="CNPJ ou CPF *" value={cnpjCpf} onChangeText={setCnpjCpf} />
-      <TextInput style={styles.input} placeholder="E-mail de Login *" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-      <TextInput style={styles.input} placeholder="Senha *" value={senha} onChangeText={setSenha} secureTextEntry />
-      <TextInput style={styles.input} placeholder="Endereço da Loja" value={endereco} onChangeText={setEndereco} />
-      <TextInput style={styles.input} placeholder="Telefone de Contato" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
+      <TextInput style={styles.input} placeholder="Nome da Loja *" placeholderTextColor="#888" value={nomeLoja} onChangeText={setNomeLoja} />
+      <TextInput style={styles.input} placeholder="CNPJ ou CPF *" placeholderTextColor="#888" value={cnpjCpf} onChangeText={setCnpjCpf} />
+      <TextInput style={styles.input} placeholder="E-mail de Login *" placeholderTextColor="#888" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <TextInput style={styles.input} placeholder="Senha *" placeholderTextColor="#888" value={senha} onChangeText={setSenha} secureTextEntry />
+      <TextInput style={styles.input} placeholder="Endereço da Loja" placeholderTextColor="#888" value={endereco} onChangeText={setEndereco} />
+      <TextInput style={styles.input} placeholder="Telefone de Contato" placeholderTextColor="#888" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
       
       <View style={styles.buttonContainer}>
         <Button title="Cadastrar Loja" onPress={handleRegister} />

@@ -32,17 +32,14 @@ export default function CreateProductScreen() {
     }
   };
 
-  // VERSÃO FINAL DA FUNÇÃO PARA SALVAR
   const handleCreateProduct = async () => {
     if (!nome || !preco || !lojaId) {
       Alert.alert('Atenção', 'Nome e Preço são obrigatórios.');
       return;
     }
 
-    // 1. Cria o "pacote" FormData
     const formData = new FormData();
 
-    // 2. Adiciona os dados de texto ao pacote
     formData.append('id_loja', String(lojaId));
     formData.append('nome', nome);
     formData.append('descricao', descricao);
@@ -50,9 +47,7 @@ export default function CreateProductScreen() {
     formData.append('unidade_de_venda', unidade);
     formData.append('estoque', estoque ? estoque.replace(',', '.') : '0');
     
-    // 3. Adiciona a imagem ao pacote (se uma imagem foi selecionada)
     if (imagem) {
-      // Pega o nome do arquivo e o tipo da imagem
       const uri = imagem.uri;
       const uriParts = uri.split('.');
       const fileType = uriParts[uriParts.length - 1];
@@ -65,7 +60,6 @@ export default function CreateProductScreen() {
     }
     
     try {
-      // 4. Envia o pacote para o backend
       await api.post('/produtos', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -92,11 +86,11 @@ export default function CreateProductScreen() {
 
       {imagem && <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />}
 
-      <TextInput style={styles.input} placeholder="Nome do Produto *" value={nome} onChangeText={setNome} />
-      <TextInput style={styles.input} placeholder="Descrição" value={descricao} onChangeText={setDescricao} />
-      <TextInput style={styles.input} placeholder="Preço (ex: 10.99) *" value={preco} onChangeText={setPreco} keyboardType="numeric" />
-      <TextInput style={styles.input} placeholder="Estoque (ex: 50)" value={estoque} onChangeText={setEstoque} keyboardType="numeric" />
-      <TextInput style={styles.input} placeholder="Unidade de Venda (UN, KG, etc) *" value={unidade} onChangeText={setUnidade} />
+      <TextInput style={styles.input} placeholder="Nome do Produto *" placeholderTextColor="#888" value={nome} onChangeText={setNome} />
+      <TextInput style={styles.input} placeholder="Descrição" placeholderTextColor="#888" value={descricao} onChangeText={setDescricao} />
+      <TextInput style={styles.input} placeholder="Preço (ex: 10.99) *" placeholderTextColor="#888" value={preco} onChangeText={setPreco} keyboardType="numeric" />
+      <TextInput style={styles.input} placeholder="Estoque (ex: 50)" placeholderTextColor="#888" value={estoque} onChangeText={setEstoque} keyboardType="numeric" />
+      <TextInput style={styles.input} placeholder="Unidade de Venda (UN, KG, etc) *" placeholderTextColor="#888" value={unidade} onChangeText={setUnidade} />
       
       <View style={styles.buttonContainer}>
         <Button title="Salvar Produto" onPress={handleCreateProduct} />
