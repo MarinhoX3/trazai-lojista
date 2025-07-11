@@ -86,6 +86,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: '#fff',
     fontSize: 16,
+    color: '#000', // <-- AQUI ESTÁ A CORREÇÃO
   },
   buttonContainer: {
     marginTop: 10,
