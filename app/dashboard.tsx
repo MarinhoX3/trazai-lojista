@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, TextInput, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, TextInput, SafeAreaView, Image } from 'react-native'; // Adicionado Image
 import { useFocusEffect, useRouter, Link } from 'expo-router';
 import React, { useState, useCallback, useMemo } from 'react';
-import api from '../src/api/api';
+import api, { ASSET_BASE_URL } from '../src/api/api'; // Importado ASSET_BASE_URL
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 
@@ -10,6 +10,7 @@ interface Produto {
   nome: string;
   preco: string;
   estoque: string;
+  url_foto: string | null; // Garantir que url_foto está na interface
 }
 
 export default function DashboardScreen() {
@@ -28,6 +29,8 @@ export default function DashboardScreen() {
       setProdutos(response.data);
     } catch (error) {
       console.error("Erro ao buscar produtos:", error);
+    } finally {
+      setLoading(false);
     }
   }, [loja?.id]);
 
@@ -64,17 +67,32 @@ export default function DashboardScreen() {
     );
   }
   
-  const renderItem = ({ item }: { item: Produto }) => (
-    <Link href={{ pathname: "/edit-product", params: { ...item } }} asChild>
-      <Pressable>
-        <View style={styles.produtoContainer}>
-          <Text style={styles.produtoNome}>{item.nome}</Text>
-          <Text>Preço: R$ {item.preco}</Text>
-          <Text>Estoque: {parseInt(item.estoque)} und</Text>
-        </View>
-      </Pressable>
-    </Link>
-  );
+  const renderItem = ({ item }: { item: Produto }) => {
+    // Constrói a URL da imagem, usando um placeholder se não houver foto
+    const imageUrl = item.url_foto
+      ? `${ASSET_BASE_URL}/${item.url_foto}?t=${new Date().getTime()}`
+      : 'https://placehold.co/80x80/e2e8f0/e2e8f0?text=Produto';
+
+    return (
+      <Link href={{ pathname: "/edit-product", params: { ...item } }} asChild>
+        <Pressable>
+          <View style={styles.produtoContainer}>
+            {/* Miniatura do produto */}
+            <Image 
+              source={{ uri: imageUrl }} 
+              style={styles.produtoImagem}
+              onError={(e) => console.log(`Erro ao carregar a imagem ${item.nome}:`, e.nativeEvent.error)}
+            />
+            <View style={styles.produtoInfo}> {/* Novo container para as informações do produto */}
+              <Text style={styles.produtoNome}>{item.nome}</Text>
+              <Text>Preço: R$ {item.preco}</Text>
+              <Text>Estoque: {parseInt(item.estoque)} und</Text>
+            </View>
+          </View>
+        </Pressable>
+      </Link>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -103,6 +121,7 @@ export default function DashboardScreen() {
           keyExtractor={(item) => item.id.toString()}
           ListEmptyComponent={<Text>Nenhum produto encontrado.</Text>}
           style={styles.lista}
+          contentContainerStyle={styles.listaContentContainer}
         />
       </View>
 
@@ -180,13 +199,28 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 20,
   },
+  listaContentContainer: {
+    paddingBottom: 60,
+  },
   produtoContainer: {
+    flexDirection: 'row', // Para alinhar imagem e texto lado a lado
+    alignItems: 'center', // Para centralizar verticalmente
     backgroundColor: '#f5f5f5',
     padding: 15,
     borderRadius: 8,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#ddd',
+  },
+  produtoImagem: { // Novo estilo para a miniatura
+    width: 60,  // Ajuste o tamanho conforme necessário
+    height: 60, // Ajuste o tamanho conforme necessário
+    borderRadius: 4,
+    marginRight: 15,
+    backgroundColor: '#e0e0e0', // Cor de fundo para placeholder
+  },
+  produtoInfo: { // Novo estilo para o container das informações (texto)
+    flex: 1, // Para que ocupe o espaço restante
   },
   produtoNome: {
     fontSize: 18,

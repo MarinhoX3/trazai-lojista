@@ -21,6 +21,7 @@ interface PedidoDetalhes {
   nome_cliente: string;
   telefone_cliente: string;
   nome_loja: string;
+  forma_pagamento: string; // Campo para a forma de pagamento
   itens: ItemDoPedido[];
 }
 
@@ -52,7 +53,6 @@ export default function ImprimirPedidoScreen() {
   const gerarHtmlDoCupom = () => {
     if (!pedido) return '';
 
-    // --- MUDANÇA 1: Alterado para 'und' ---
     const itensHtml = pedido.itens.map(item => `
       <tr>
         <td>${parseInt(String(item.quantidade), 10)} und</td>
@@ -86,6 +86,7 @@ export default function ImprimirPedidoScreen() {
             <p><b>Nome:</b> ${pedido.nome_cliente}</p>
             <p><b>Telefone:</b> ${pedido.telefone_cliente}</p>
             <p><b>Endereço:</b> ${pedido.endereco_entrega}</p>
+            <p><b>Forma de Pagamento:</b> ${pedido.forma_pagamento}</p>
             
             <h2>Itens do Pedido</h2>
             <table>
@@ -133,16 +134,17 @@ export default function ImprimirPedidoScreen() {
             
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Cliente</Text>
-                <Text>{pedido.nome_cliente}</Text>
-                <Text>{pedido.telefone_cliente}</Text>
-                <Text>{pedido.endereco_entrega}</Text>
+                {/* CORREÇÃO: Padronizado para "Rótulo em negrito: Valor" */}
+                <Text><Text style={{fontWeight: 'bold'}}>Nome:</Text> {pedido.nome_cliente}</Text>
+                <Text><Text style={{fontWeight: 'bold'}}>Telefone:</Text> {pedido.telefone_cliente}</Text>
+                <Text><Text style={{fontWeight: 'bold'}}>Endereço:</Text> {pedido.endereco_entrega}</Text>
+                <Text><Text style={{fontWeight: 'bold'}}>Forma de Pagamento:</Text> {pedido.forma_pagamento}</Text> 
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Itens</Text>
                 {pedido.itens.map((item, index) => (
                     <View key={index} style={styles.itemRow}>
-                        {/* --- MUDANÇA 2: Alterado para 'und' --- */}
                         <Text style={styles.itemQty}>{parseInt(String(item.quantidade), 10)} und</Text>
                         <Text style={styles.itemName}>{item.nome_produto}</Text>
                         <Text style={styles.itemPrice}>R$ {parseFloat(item.preco_unitario_congelado).toFixed(2)}</Text>
@@ -152,7 +154,6 @@ export default function ImprimirPedidoScreen() {
             
             <Text style={styles.totalText}>Total: R$ {parseFloat(pedido.valor_total).toFixed(2)}</Text>
 
-            {/* --- MUDANÇA 3: Botão de imprimir movido para dentro do cupom --- */}
             <Pressable style={styles.printButton} onPress={handleImprimir}>
                 <Ionicons name="print" size={24} color="#fff" />
                 <Text style={styles.printButtonText}>Imprimir Cupom</Text>
@@ -181,8 +182,7 @@ const styles = StyleSheet.create({
         gap: 10, 
         backgroundColor: '#007BFF', 
         padding: 15, 
-        // Removemos a margem para o botão ficar dentro do card
-        marginTop: 30, // Adicionamos margem superior para separar do total
+        marginTop: 30, 
         borderRadius: 8, 
         justifyContent: 'center', 
         alignItems: 'center' 

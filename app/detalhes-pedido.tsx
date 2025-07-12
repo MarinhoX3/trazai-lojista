@@ -20,6 +20,7 @@ interface PedidoDetalhes {
   endereco_entrega: string;
   nome_cliente: string;
   telefone_cliente: string;
+  forma_pagamento: string; // Adicionado: Campo para a forma de pagamento
   itens: ItemDoPedido[];
 }
 
@@ -111,6 +112,11 @@ export default function DetalhesPedidoScreen() {
                 <Ionicons name="home-outline" size={18} color="#007BFF" />
                 <Text style={[styles.detailText, styles.linkText]}>{pedido.endereco_entrega}</Text>
             </TouchableOpacity>
+            {/* Adicionado: Exibição da forma de pagamento na UI */}
+            <View style={styles.detailRow}>
+                <Ionicons name="card-outline" size={18} color="#555" />
+                <Text style={styles.detailText}>Forma de Pagamento: {pedido.forma_pagamento}</Text>
+            </View>
         </View>
 
         {/* Seção de Itens do Pedido (sem alterações) */}
