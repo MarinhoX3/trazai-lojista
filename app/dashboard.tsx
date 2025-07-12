@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, TextInput, SafeAreaView, Image } from 'react-native'; // Adicionado Image
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, TextInput, SafeAreaView, Image } from 'react-native';
 import { useFocusEffect, useRouter, Link } from 'expo-router';
 import React, { useState, useCallback, useMemo } from 'react';
-import api, { ASSET_BASE_URL } from '../src/api/api'; // Importado ASSET_BASE_URL
+import api, { ASSET_BASE_URL } from '../src/api/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 
@@ -10,7 +10,7 @@ interface Produto {
   nome: string;
   preco: string;
   estoque: string;
-  url_foto: string | null; // Garantir que url_foto está na interface
+  url_foto: string | null;
 }
 
 export default function DashboardScreen() {
@@ -68,7 +68,6 @@ export default function DashboardScreen() {
   }
   
   const renderItem = ({ item }: { item: Produto }) => {
-    // Constrói a URL da imagem, usando um placeholder se não houver foto
     const imageUrl = item.url_foto
       ? `${ASSET_BASE_URL}/${item.url_foto}?t=${new Date().getTime()}`
       : 'https://placehold.co/80x80/e2e8f0/e2e8f0?text=Produto';
@@ -77,13 +76,12 @@ export default function DashboardScreen() {
       <Link href={{ pathname: "/edit-product", params: { ...item } }} asChild>
         <Pressable>
           <View style={styles.produtoContainer}>
-            {/* Miniatura do produto */}
             <Image 
               source={{ uri: imageUrl }} 
               style={styles.produtoImagem}
               onError={(e) => console.log(`Erro ao carregar a imagem ${item.nome}:`, e.nativeEvent.error)}
             />
-            <View style={styles.produtoInfo}> {/* Novo container para as informações do produto */}
+            <View style={styles.produtoInfo}>
               <Text style={styles.produtoNome}>{item.nome}</Text>
               <Text>Preço: R$ {item.preco}</Text>
               <Text>Estoque: {parseInt(item.estoque)} und</Text>
@@ -125,6 +123,7 @@ export default function DashboardScreen() {
         />
       </View>
 
+      {/* --- BARRA DE NAVEGAÇÃO ATUALIZADA --- */}
       <View style={styles.footerNav}>
         <Pressable style={styles.footerButton}>
             <Ionicons name="home" size={24} color="#007BFF" />
@@ -138,6 +137,11 @@ export default function DashboardScreen() {
                     <Text style={styles.badgeText}>{contagemPedidos}</Text>
                 </View>
             )}
+        </Pressable>
+        {/* --- NOVO BOTÃO ADICIONADO --- */}
+        <Pressable style={styles.footerButton} onPress={() => router.push('/financeiro' as any)}>
+            <Ionicons name="wallet-outline" size={24} color="#555" />
+            <Text style={styles.footerButtonText}>Financeiro</Text>
         </Pressable>
         <Pressable style={styles.footerButton} onPress={() => router.push('/edit-loja')}>
             <Ionicons name="person-circle-outline" size={24} color="#555" />
@@ -203,8 +207,8 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
   },
   produtoContainer: {
-    flexDirection: 'row', // Para alinhar imagem e texto lado a lado
-    alignItems: 'center', // Para centralizar verticalmente
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f5f5f5',
     padding: 15,
     borderRadius: 8,
@@ -212,15 +216,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  produtoImagem: { // Novo estilo para a miniatura
-    width: 60,  // Ajuste o tamanho conforme necessário
-    height: 60, // Ajuste o tamanho conforme necessário
+  produtoImagem: {
+    width: 60,
+    height: 60,
     borderRadius: 4,
     marginRight: 15,
-    backgroundColor: '#e0e0e0', // Cor de fundo para placeholder
+    backgroundColor: '#e0e0e0',
   },
-  produtoInfo: { // Novo estilo para o container das informações (texto)
-    flex: 1, // Para que ocupe o espaço restante
+  produtoInfo: {
+    flex: 1,
   },
   produtoNome: {
     fontSize: 18,
@@ -232,7 +236,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     paddingTop: 10,
-    paddingBottom: 34, 
+    paddingBottom: 45,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     backgroundColor: '#f8f8f8',
