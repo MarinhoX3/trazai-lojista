@@ -38,9 +38,12 @@ export default function DashboardScreen() {
     if (!loja?.id) return;
     try {
         const response = await api.get(`/pedidos/loja/${loja.id}/pedidos/count`);
-        setContagemPedidos(response.data.count);
+        // Adicionado console.log para depuração
+        console.log("Resposta da API de contagem de pedidos:", response.data);
+        setContagemPedidos(response.data.total || 0); // O backend retorna 'total', não 'count'
     } catch (error) {
         console.error("Erro ao buscar contagem de pedidos:", error);
+        setContagemPedidos(0); // Em caso de erro, assume 0 pedidos
     }
   }, [loja?.id]);
 

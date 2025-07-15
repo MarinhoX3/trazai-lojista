@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, Pressable } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native'; // Importar KeyboardAvoidingView e Platform
 import api from '../src/api/api';
 import { useRouter } from 'expo-router';
 
@@ -42,31 +42,41 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.titulo}>Cadastro da Loja</Text>
+    // Envolver o ScrollView com KeyboardAvoidingView
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingContainer} // Estilo para preencher a tela
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // 'padding' para iOS, 'height' para Android
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // Ajuste o offset conforme necessário para o cabeçalho
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}> {/* Usar scrollContent aqui */}
+        <Text style={styles.titulo}>Cadastro da Loja</Text>
 
-      <TextInput style={styles.input} placeholder="Nome da Loja *" placeholderTextColor="#888" value={nomeLoja} onChangeText={setNomeLoja} />
-      <TextInput style={styles.input} placeholder="CNPJ ou CPF *" placeholderTextColor="#888" value={cnpjCpf} onChangeText={setCnpjCpf} />
-      <TextInput style={styles.input} placeholder="E-mail de Login *" placeholderTextColor="#888" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-      <TextInput style={styles.input} placeholder="Senha *" placeholderTextColor="#888" value={senha} onChangeText={setSenha} secureTextEntry />
-      <TextInput style={styles.input} placeholder="Endereço da Loja" placeholderTextColor="#888" value={endereco} onChangeText={setEndereco} />
-      <TextInput style={styles.input} placeholder="Telefone de Contato" placeholderTextColor="#888" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
-      
-      <View style={styles.buttonContainer}>
-        <Button title="Cadastrar Loja" onPress={handleRegister} />
-      </View>
-      
-      <Pressable onPress={() => router.back()}>
-        <Text style={styles.linkText}>Já tenho uma conta. Fazer Login</Text>
-      </Pressable>
+        <TextInput style={styles.input} placeholder="Nome da Loja *" placeholderTextColor="#888" value={nomeLoja} onChangeText={setNomeLoja} />
+        <TextInput style={styles.input} placeholder="CNPJ ou CPF *" placeholderTextColor="#888" value={cnpjCpf} onChangeText={setCnpjCpf} />
+        <TextInput style={styles.input} placeholder="E-mail de Login *" placeholderTextColor="#888" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+        <TextInput style={styles.input} placeholder="Senha *" placeholderTextColor="#888" value={senha} onChangeText={setSenha} secureTextEntry />
+        <TextInput style={styles.input} placeholder="Endereço da Loja" placeholderTextColor="#888" value={endereco} onChangeText={setEndereco} />
+        <TextInput style={styles.input} placeholder="Telefone de Contato" placeholderTextColor="#888" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
+        
+        <View style={styles.buttonContainer}>
+          <Button title="Cadastrar Loja" onPress={handleRegister} />
+        </View>
+        
+        <Pressable onPress={() => router.back()}>
+          <Text style={styles.linkText}>Já tenho uma conta. Fazer Login</Text>
+        </Pressable>
 
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
+  keyboardAvoidingContainer: {
+    flex: 1, // Permite que o KeyboardAvoidingView preencha a tela
+  },
+  scrollContent: { // Renomeado de 'container' para 'scrollContent' para maior clareza
+    flexGrow: 1, // Permite que o conteúdo do ScrollView cresça e role
     justifyContent: 'center',
     padding: 20,
     backgroundColor: '#f5f5f5',
@@ -86,7 +96,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: '#fff',
     fontSize: 16,
-    color: '#000', // <-- AQUI ESTÁ A CORREÇÃO
+    color: '#000',
   },
   buttonContainer: {
     marginTop: 10,

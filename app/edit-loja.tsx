@@ -8,7 +8,7 @@ import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 
 export default function EditLojaScreen() {
   const router = useRouter();
-  const { loja, token, updateLojaContext, logout } = useAuthLoja();
+  const { loja, token, logout } = useAuthLoja();
 
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -82,10 +82,7 @@ export default function EditLojaScreen() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       
-      if (updateLojaContext) {
-        const updatedLoja = { ...loja, nome_loja: nome };
-        await updateLojaContext(updatedLoja);
-      }
+      // Atualize o contexto da loja aqui se necessário, caso tenha função para isso
 
       Alert.alert('Sucesso', 'Os dados da sua loja foram atualizados!', [
         { text: 'OK', onPress: () => router.back() }

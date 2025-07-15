@@ -9,6 +9,7 @@ interface AuthLoja {
   nome_loja: string;
   email_login: string;
   // Adicione outras propriedades da loja que você queira ter acesso fácil
+  taxa_entrega?: number; // NOVO: Adicionamos a taxa_entrega à interface
 }
 
 // Define o que o contexto vai fornecer
@@ -18,7 +19,7 @@ interface AuthLojaContextData {
   login: (lojaData: AuthLoja, token: string) => Promise<void>; // MUDANÇA: A função de login agora também recebe o token
   logout: () => Promise<void>;
   loading: boolean;
-  updateLojaContext: (updatedData: Partial<AuthLoja>) => Promise<void>;
+  updateAuthLoja: (updatedData: Partial<AuthLoja>) => Promise<void>; // CORREÇÃO: Renomeado para updateAuthLoja
 }
 
 const AuthLojaContext = createContext<AuthLojaContextData>({} as AuthLojaContextData);
@@ -71,7 +72,8 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.removeItem('@AppLojista:token');
   };
 
-  const updateLojaContext = async (updatedData: Partial<AuthLoja>) => {
+  // CORREÇÃO: Renomeado de updateLojaContext para updateAuthLoja
+  const updateAuthLoja = async (updatedData: Partial<AuthLoja>) => {
     setLoja(prevLoja => {
       if (!prevLoja) return null;
       const newLojaState = { ...prevLoja, ...updatedData };
@@ -82,7 +84,8 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     // NOVO: Fornecemos o token para todo o aplicativo
-    <AuthLojaContext.Provider value={{ loja, token, login, logout, loading, updateLojaContext }}>
+    // CORREÇÃO: Fornecer updateAuthLoja no contexto
+    <AuthLojaContext.Provider value={{ loja, token, login, logout, loading, updateAuthLoja }}>
       {children}
     </AuthLojaContext.Provider>
   );
