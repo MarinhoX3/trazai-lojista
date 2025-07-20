@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Button, Platform, Alert } from 'react-native'; // NOVO: Adicionado Button, Platform, Alert
 import { Stack } from 'expo-router';
-import api from '../src/api/api';
-import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
+import api from '../../src/api/api';
+import { useAuthLoja } from '../../src/api/contexts/AuthLojaContext';
 // NOVO: Importa o componente de calendário
 import DateTimePicker from '@react-native-community/datetimepicker'; 
 

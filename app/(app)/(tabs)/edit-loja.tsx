@@ -1,10 +1,25 @@
+// app/edit-loja.tsx
+
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, SafeAreaView, ActivityIndicator, Image, Pressable, Platform } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  Button, 
+  StyleSheet, 
+  Alert, 
+  ScrollView, 
+  SafeAreaView, 
+  ActivityIndicator, 
+  Image, 
+  Pressable, 
+  Platform 
+} from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
-import api, { ASSET_BASE_URL } from '../src/api/api';
-import { useAuthLoja } from '../src/api/contexts/AuthLojaContext'; 
+import api, { ASSET_BASE_URL } from '../../../src/api/api';
+import { useAuthLoja } from '../../../src/api/contexts/AuthLojaContext'; 
 
 export default function EditLojaScreen() {
   const router = useRouter();
@@ -128,7 +143,9 @@ export default function EditLojaScreen() {
         { text: "Cancelar", style: "cancel" },
         { text: "Sim, Sair", style: "destructive", onPress: async () => {
             await logout();
-            router.replace('/'); 
+            // CORREÇÃO AQUI: Redireciona para a rota raiz.
+            // O app/_layout.tsx irá então redirecionar para /(auth)/index se não houver loja logada.
+            router.replace('/' as any); 
         }}
       ]
     );
@@ -142,9 +159,9 @@ export default function EditLojaScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: 'Editar Dados da Loja' }} />
+      {/* O Stack.Screen aqui deve ser usado no _layout.tsx, não na tela */}
+      {/* Remova: <Stack.Screen options={{ title: 'Editar Dados da Loja' }} /> se o cabeçalho for definido no _layout.tsx */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.titulo}>Editar Informações</Text>
         
         <Pressable onPress={pickImage} style={styles.imageContainer}>
           <Image source={{ uri: displayImageUri }} style={styles.profileImage} />

@@ -5,7 +5,7 @@ import {
   KeyboardAvoidingView, ActivityIndicator 
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import api from '../src/api/api';
+import api from '../../src/api/api';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function CreateProductScreen() {

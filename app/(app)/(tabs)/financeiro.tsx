@@ -1,9 +1,22 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Alert, Pressable, TextInput, ScrollView } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  SafeAreaView, 
+  ActivityIndicator, 
+  Alert, 
+  Pressable, 
+  TextInput, 
+  ScrollView, // Importar ScrollView
+  KeyboardAvoidingView, // Importar KeyboardAvoidingView
+  Platform // Importar Platform para ajustes específicos de SO
+} from 'react-native';
 import { Stack, useFocusEffect } from 'expo-router';
-import { useAuthLoja } from '../src/api/contexts/AuthLojaContext'; // Assumindo seu AuthLojaContext
-import api from '../src/api/api';
+import { useAuthLoja } from '../../../src/api/contexts/AuthLojaContext'; // Assumindo seu AuthLojaContext
+import api from '../../../src/api/api';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking'; // Importar Linking
 
 export default function FinanceiroScreen() {
   const { loja, updateAuthLoja } = useAuthLoja(); // Assumindo que updateAuthLoja existe para atualizar o contexto
@@ -23,12 +36,6 @@ export default function FinanceiroScreen() {
     console.log("fetchDadosFinanceiros: Iniciando busca de dados financeiros...");
     if (!loja?.id) {
       console.warn("fetchDadosFinanceiros: ID da loja não disponível. Não buscando dados.");
-      setLoading(false);
-      return;
-    }
-
-    // Evitar refetching se os dados para esta loja ID já foram buscados
-    if (fetchedLojaIdRef.current === loja.id) {
       setLoading(false);
       return;
     }
@@ -59,7 +66,7 @@ export default function FinanceiroScreen() {
         console.warn("fetchDadosFinanceiros: Taxa de entrega não encontrada ou inválida. Definindo para 0.00.");
       }
       
-      // Marcar que os dados foram buscados para este loja.id
+      // Marcar que os dados foram buscados para este loja.id (manter para outras otimizações se houver)
       fetchedLojaIdRef.current = loja.id;
 
     } catch (error: any) {
@@ -96,17 +103,13 @@ export default function FinanceiroScreen() {
         const { url } = response.data;
         console.log("handlePagarComissao: URL de pagamento recebida:", url);
 
-        // Abertura do link de pagamento (Stripe Checkout ou similar)
-        // Você precisará de uma biblioteca como 'expo-linking' ou 'react-native-webview'
-        // para abrir esta URL de forma robusta.
-        // Exemplo com expo-linking:
-        // const supported = await Linking.canOpenURL(url);
-        // if (supported) {
-        //     await Linking.openURL(url);
-        // } else {
-        //     Alert.alert("Erro", `Não foi possível abrir o link. Copie e cole no seu navegador: ${url}`);
-        // }
-        Alert.alert("Pagamento", `Link de pagamento gerado: ${url}. Abra no navegador.`); // Placeholder
+        // CORREÇÃO: Ativar a lógica para abrir o link automaticamente
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+            await Linking.openURL(url);
+        } else {
+            Alert.alert("Erro", `Não foi possível abrir o link. Copie e cole no seu navegador: ${url}`);
+        }
 
     } catch (error: any) {
         const message = error.response?.data?.message || "Não foi possível gerar o link de pagamento.";
@@ -124,19 +127,19 @@ export default function FinanceiroScreen() {
     try {
       const parsedTaxa = parseFloat(taxaEntrega.replace(',', '.')); // Garante que é um número (substitui vírgula por ponto)
       if (isNaN(parsedTaxa) || parsedTaxa < 0) {
-        Alert.alert("Erro", "Por favor, insira um valor numérico válido para a taxa de entrega.");
+        Alert.alert("Erro", "Por favor, insira um valor numérico válido e positivo para a taxa de entrega.");
         return;
       }
 
-      console.log(`handleSalvarTaxaEntrega: Chamando API para atualizar taxa de entrega: /lojas/${loja.id}`);
-      const response = await api.put(`/lojas/${loja.id}`, { taxa_entrega: parsedTaxa });
+      // --- ALTERAÇÃO AQUI: USANDO A NOVA ROTA DEDICADA PARA TAXA DE ENTREGA ---
+      console.log(`handleSalvarTaxaEntrega: Chamando API para atualizar taxa de entrega: /lojas/${loja.id}/taxa-entrega`);
+      const response = await api.put(`/lojas/${loja.id}/taxa-entrega`, { taxa_entrega: parsedTaxa });
 
-      // Atualiza o contexto da loja se a atualização for bem-sucedida
-      if (updateAuthLoja && response.data.loja) { // Assumindo que o backend retorna o objeto loja atualizado
-        updateAuthLoja(response.data.loja);
-      }
-      
-      Alert.alert("Sucesso", "Taxa de entrega atualizada com sucesso!");
+      // O backend 'atualizarTaxaEntrega' retorna apenas uma mensagem de sucesso, não o objeto loja completo.
+      // Portanto, para atualizar a taxa na tela e no contexto, re-buscamos os dados financeiros.
+      Alert.alert("Sucesso", response.data.message || "Taxa de entrega atualizada com sucesso!");
+      fetchDadosFinanceiros(); // Re-busca os dados para atualizar a tela e o contexto
+
     } catch (error: any) {
       const message = error.response?.data?.message || "Não foi possível salvar a taxa de entrega.";
       console.error("handleSalvarTaxaEntrega: Erro ao salvar taxa de entrega:", error.response?.data || error.message);
@@ -147,9 +150,17 @@ export default function FinanceiroScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: 'Financeiro' }} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <KeyboardAvoidingView
+      style={styles.fullScreenContainer} // Um container que ocupa a tela inteira
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Ajuste o offset se necessário
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} // Estilo para o conteúdo dentro da ScrollView
+        keyboardShouldPersistTaps="handled" // Permite que toques fora dos inputs fechem o teclado
+        showsVerticalScrollIndicator={false} // Opcional: esconde a barra de rolagem vertical
+      >
+        <Stack.Screen options={{ title: 'Financeiro' }} />
         <Ionicons name="cash-outline" size={80} color="#28a745" />
         <Text style={styles.title}>Suas Comissões</Text>
         <Text style={styles.subtitle}>
@@ -197,6 +208,8 @@ export default function FinanceiroScreen() {
               keyboardType="numeric"
               placeholder="Ex: 5.00"
               placeholderTextColor="#888"
+              returnKeyType="done" // Adicionado para melhor navegação do teclado
+              onSubmitEditing={handleSalvarTaxaEntrega} // Tenta salvar ao pressionar "Done"
             />
             <Pressable 
               style={styles.saveButton} 
@@ -213,13 +226,17 @@ export default function FinanceiroScreen() {
         )}
 
       </ScrollView>
-    </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  fullScreenContainer: { // Novo estilo para o KeyboardAvoidingView
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
   scrollContent: { 
+    flexGrow: 1, // Permite que o conteúdo cresça e ocupe o espaço disponível
     padding: 20, 
     alignItems: 'center', // Centraliza o conteúdo horizontalmente
     paddingBottom: 50, // Espaço extra para rolagem

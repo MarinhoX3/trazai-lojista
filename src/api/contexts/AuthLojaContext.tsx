@@ -1,3 +1,5 @@
+//AuthLojaContext.tsx
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePushNotifications } from '../../hooks/usePushNotifications';

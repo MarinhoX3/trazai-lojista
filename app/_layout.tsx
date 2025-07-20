@@ -1,42 +1,57 @@
-import React from 'react';
-import { Stack, useRouter } from 'expo-router';
-import { AuthLojaProvider } from '../src/api/contexts/AuthLojaContext';
-import { Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+// app/_layout.tsx (Principal - na raiz de app/)
+
+import React, { useEffect } from 'react';
+import { Stack, SplashScreen, useSegments } from 'expo-router'; // Removido 'useRouter' e 'Redirect'
+import { AuthLojaProvider, useAuthLoja } from '../src/api/contexts/AuthLojaContext';
+import { PedidosAtivosProvider } from '../src/api/contexts/PedidosAtivosContext';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 
-export default function RootLayout() {
-  const router = useRouter();
+// Previna que a tela de splash se esconda automaticamente
+SplashScreen.preventAutoHideAsync();
 
+export default function RootLayout() {
   return (
     <AuthLojaProvider>
-      <StripeProvider
-          publishableKey="pk_test_SUA_CHAVE_PUBLICAVEL_AQUI" // <-- LEMBRE-SE DE COLOCAR A SUA CHAVE PUBLICÁVEL
-      >
-          <Stack>
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="dashboard" options={{ headerShown: false }} />
-
-              <Stack.Screen name="register" options={{ title: 'Cadastro de Loja' }} />
-              <Stack.Screen name="edit-loja" options={{ title: 'Editar Dados da Loja' }} />
-              <Stack.Screen name="create-product" options={{ title: 'Adicionar Novo Produto' }} />
-              <Stack.Screen name="edit-product" options={{ title: 'Editar Produto' }} />
-              <Stack.Screen name="historico-pedidos" options={{ title: 'Histórico de Pedidos' }}/>
-              <Stack.Screen name="imprimir-pedido" options={{ title: 'Imprimir Cupom' }}/>
-
-              <Stack.Screen 
-                name="pedidos-loja" 
-                options={{ 
-                  title: 'Pedidos Ativos',
-                  headerRight: () => (
-                      <Pressable onPress={() => router.push('/historico-pedidos')} style={{ marginRight: 15 }}>
-                          <Ionicons name="archive-outline" size={24} color="#007BFF" />
-                      </Pressable>
-                  )
-                }} 
-              />
-          </Stack>
-      </StripeProvider>
+      <PedidosAtivosProvider>
+        <StripeProvider publishableKey="pk_test_SUA_CHAVE_PUBLICAVEL_AQUI">
+          <RootLayoutNav />
+        </StripeProvider>
+      </PedidosAtivosProvider>
     </AuthLojaProvider>
+  );
+}
+
+function RootLayoutNav() {
+  const { loja, loading } = useAuthLoja();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync();
+    }
+  }, [loading]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#007BFF" />
+        <Text style={{ marginTop: 10 }}>Carregando dados da loja...</Text>
+      </View>
+    );
+  }
+
+  if (!loja) {
+    return (
+      <Stack>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack>
+      <Stack.Screen name="(app)" options={{ headerShown: false }} />
+    </Stack>
   );
 }

@@ -1,9 +1,12 @@
+// app/pedidos-loja.tsx
+
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Pressable, Alert } from 'react-native'; // Adicionado Alert
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import api from '../src/api/api';
-import { useAuthLoja } from '../src/api/contexts/AuthLojaContext';
+import api from '../../../src/api/api';
+import { useAuthLoja } from '../../../src/api/contexts/AuthLojaContext';
 import { Ionicons } from '@expo/vector-icons';
+import { usePedidosAtivos } from '../../../src/api/contexts/PedidosAtivosContext'; // Importe o hook do contexto de pedidos ativos
 
 // Interface para definir o formato de um Pedido com todos os detalhes
 interface Pedido {
@@ -14,6 +17,7 @@ interface Pedido {
   nome_cliente: string;
   endereco_entrega: string;
   telefone_cliente: string;
+  // Adicione outros campos se existirem no seu backend
 }
 
 // Lista de status possíveis para os botões.
@@ -24,6 +28,7 @@ export default function PedidosLojaScreen() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const { loja } = useAuthLoja();
+  const { fetchPedidosPendentesCount } = usePedidosAtivos(); // Obtenha a função para recarregar a contagem
 
   const buscarPedidos = useCallback(async () => {
     if (!loja?.id) {
@@ -36,31 +41,41 @@ export default function PedidosLojaScreen() {
       setPedidos(response.data);
     } catch (error) {
       console.error("Erro ao buscar pedidos da loja:", error);
+      Alert.alert("Erro", "Não foi possível carregar os pedidos da loja."); // Alerta de erro para o usuário
     } finally {
       setLoading(false);
     }
   }, [loja?.id]);
 
+  // Use useFocusEffect para buscar pedidos sempre que a tela estiver em foco
   useFocusEffect(
     useCallback(() => {
       buscarPedidos();
-    }, [buscarPedidos])
+      fetchPedidosPendentesCount(); // Também busca a contagem quando a tela de pedidos é focada
+    }, [buscarPedidos, fetchPedidosPendentesCount])
   );
 
   const handleAtualizarStatus = async (idPedido: number, novoStatus: string) => {
     try {
-        await api.put(`/pedidos/${idPedido}/status`, { status: novoStatus });
-        setPedidos(pedidosAtuais => {
-            if (novoStatus === 'Finalizado' || novoStatus === 'Cancelado') {
-                return pedidosAtuais.filter(p => p.id !== idPedido);
-            }
-            return pedidosAtuais.map(p => 
-                p.id === idPedido ? { ...p, status: novoStatus } : p
-            );
-        });
+      await api.put(`/pedidos/${idPedido}/status`, { status: novoStatus });
+      
+      // Atualiza o estado local dos pedidos para refletir a mudança
+      setPedidos(pedidosAtuais => {
+        if (novoStatus === 'Finalizado' || novoStatus === 'Cancelado') {
+          // Remove o pedido da lista de ativos se for finalizado/cancelado
+          return pedidosAtuais.filter(p => p.id !== idPedido);
+        }
+        // Atualiza o status do pedido na lista
+        return pedidosAtuais.map(p => 
+          p.id === idPedido ? { ...p, status: novoStatus } : p
+        );
+      });
+      
+      Alert.alert('Sucesso', `Status do pedido ${idPedido} atualizado para "${novoStatus}"!`);
+      fetchPedidosPendentesCount(); // ATUALIZA A CONTAGEM DO BADGE APÓS MUDAR O STATUS
     } catch (error) {
-        console.error("Erro ao atualizar status:", error);
-        alert('Não foi possível atualizar o status do pedido.');
+      console.error("Erro ao atualizar status:", error);
+      Alert.alert('Erro', 'Não foi possível atualizar o status do pedido.'); // Usar Alert em vez de alert
     }
   };
 
@@ -93,11 +108,11 @@ export default function PedidosLojaScreen() {
             
             <View style={styles.actionsContainer}>
                 {proximoStatus && (
-                     <Pressable 
+                    <Pressable 
                         style={styles.actionButton} 
                         onPress={() => handleAtualizarStatus(item.id, proximoStatus)}>
                         <Text style={styles.actionButtonText}>Mover para "{proximoStatus}"</Text>
-                     </Pressable>
+                    </Pressable>
                 )}
                 {/* Botão de Impressão */}
                 <Pressable 

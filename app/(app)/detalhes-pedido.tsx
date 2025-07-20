@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 // NOVO: Importa Linking para abrir URLs e TouchableOpacity para feedback de clique
 import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Pressable, ScrollView, Alert, TouchableOpacity, Linking } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import api from '../src/api/api';
+import api from '../../src/api/api';
 import { Ionicons } from '@expo/vector-icons';
 
 // Interfaces para os detalhes completos do pedido

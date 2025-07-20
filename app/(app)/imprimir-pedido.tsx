@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Pressable, ScrollView, Alert } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import * as Print from 'expo-print';
-import api from '../src/api/api';
+import api from '../../src/api/api';
 import { Ionicons } from '@expo/vector-icons';
 
 // Interfaces para os detalhes completos do pedido
