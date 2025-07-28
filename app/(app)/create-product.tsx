@@ -17,6 +17,7 @@ export default function CreateProductScreen() {
   const [preco, setPreco] = useState('');
   const [unidade, setUnidade] = useState('UN');
   const [estoque, setEstoque] = useState('');
+  const [categoria, setCategoria] = useState(''); // NOVO: Estado para a categoria do produto
   const [imagem, setImagem] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isSaving, setIsSaving] = useState(false); // Estado para o loading do botão Salvar
 
@@ -51,14 +52,13 @@ export default function CreateProductScreen() {
     formData.append('preco', preco.replace(',', '.'));
     formData.append('unidade_de_venda', unidade);
     formData.append('estoque', estoque ? estoque.replace(',', '.') : '0');
+    formData.append('categoria', categoria); // NOVO: Adiciona a categoria ao formData
     
     if (imagem) {
       const uri = imagem.uri;
       const uriParts = uri.split('.');
       const fileType = uriParts[uriParts.length - 1];
 
-      // --- AQUI ESTÁ A CORREÇÃO ---
-      // O nome do campo foi alterado de 'foto_produto' para 'foto' para corresponder ao backend.
       formData.append('foto', {
         uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
         name: `photo.${fileType}`,
@@ -107,6 +107,14 @@ export default function CreateProductScreen() {
           <TextInput style={styles.input} placeholder="Preço (ex: 10.99) *" placeholderTextColor="#888" value={preco} onChangeText={setPreco} keyboardType="numeric" />
           <TextInput style={styles.input} placeholder="Estoque (ex: 50)" placeholderTextColor="#888" value={estoque} onChangeText={setEstoque} keyboardType="numeric" />
           <TextInput style={styles.input} placeholder="Unidade de Venda (UN, KG, etc) *" placeholderTextColor="#888" value={unidade} onChangeText={setUnidade} />
+          {/* NOVO: Campo para Categoria do Produto */}
+          <TextInput 
+            style={styles.input} 
+            placeholder="Categoria do Produto (ex: Bebidas, Laticínios)" 
+            placeholderTextColor="#888" 
+            value={categoria} 
+            onChangeText={setCategoria} 
+          />
           
           <View style={styles.buttonContainer}>
             {isSaving ? (

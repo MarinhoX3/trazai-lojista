@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, Text, TextInput, Button, StyleSheet, Alert, 
   ScrollView, Image, Pressable, Platform, SafeAreaView, 
@@ -8,29 +8,64 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import api, { ASSET_BASE_URL } from '../../src/api/api';
 import * as ImagePicker from 'expo-image-picker';
 
+// A interface ProductParams para os dados que esperamos do backend
+// E para a tipagem dos parâmetros da URL, que são sempre strings
+interface ProductParams {
+  id: string;
+  nome: string;
+  preco: string; // Alterado para string, pois vem como string da URL e do TextInput
+  estoque: string; // Alterado para string, pois vem como string da URL e do TextInput
+  descricao: string;
+  url_foto: string;
+  categoria?: string; 
+}
+
 export default function EditProductScreen() {
   const router = useRouter();
-  const product = useLocalSearchParams<{ id: string, nome: string, preco: string, estoque: string, descricao: string, url_foto: string }>();
+  // Obtém os parâmetros da URL. useLocalSearchParams retorna Record<string, string | string[] | undefined>.
+  // Acessamos 'id' diretamente e garantimos que é uma string.
+  const { id } = useLocalSearchParams(); 
+  const productId = typeof id === 'string' ? id : undefined; // Garante que id é string ou undefined
 
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [preco, setPreco] = useState('');
   const [estoque, setEstoque] = useState('');
+  const [categoria, setCategoria] = useState(''); 
   const [novaImagem, setNovaImagem] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [imagemAtualUrl, setImagemAtualUrl] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false); // Estado para o loading do botão
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(true);
 
+  // Função para buscar os detalhes do produto do backend
   useEffect(() => {
-    if (product) {
-      setNome(product.nome || '');
-      setDescricao(product.descricao || '');
-      setPreco(product.preco || '');
-      setImagemAtualUrl(product.url_foto || null);
-      
-      const estoqueFormatado = product.estoque ? parseInt(product.estoque, 10).toString() : '';
-      setEstoque(estoqueFormatado);
+    if (!productId) {
+      setIsLoadingProduct(false);
+      return;
     }
-  }, []);
+    setIsLoadingProduct(true);
+    api.get(`/produtos/${productId}`)
+      .then(response => {
+        const productData = response.data; 
+
+        setNome(productData.nome || '');
+        setDescricao(productData.descricao || '');
+        setPreco(String(productData.preco || '')); // Converte para string
+        // CORREÇÃO: Garante que o estoque é um número inteiro, removendo formatação
+        setEstoque(String(parseInt(productData.estoque || '0', 10))); 
+        setCategoria(productData.categoria || ''); 
+        setImagemAtualUrl(productData.url_foto || null);
+      })
+      .catch(error => {
+        console.error("Erro ao carregar detalhes do produto:", error.response?.data || error.message);
+        Alert.alert('Erro', 'Não foi possível carregar os detalhes do produto.');
+        router.back(); 
+      })
+      .finally(() => {
+        setIsLoadingProduct(false);
+      });
+  }, [productId, router]); // Dependências: productId e router (para navegação em caso de erro)
+
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -41,9 +76,6 @@ export default function EditProductScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      // --- CORREÇÃO: CORTE DE IMAGEM ---
-      // Removemos a restrição de aspecto para permitir um corte livre.
-      // aspect: [4, 3],
       quality: 1,
     });
     if (!result.canceled) {
@@ -52,15 +84,16 @@ export default function EditProductScreen() {
   };
 
   const handleUpdate = async () => {
-    if (!product.id) return;
+    if (!productId) return; 
 
     setIsSaving(true);
     const formData = new FormData();
     formData.append('nome', nome);
     formData.append('descricao', descricao);
     formData.append('preco', preco.replace(',', '.'));
-    formData.append('estoque', estoque);
-
+    formData.append('estoque', estoque); // O estoque já está como string de inteiro
+    formData.append('categoria', categoria); 
+    
     if (novaImagem) {
       const uri = novaImagem.uri;
       const uriParts = uri.split('.');
@@ -73,19 +106,21 @@ export default function EditProductScreen() {
     }
     
     try {
-      await api.put(`/produtos/${product.id}`, formData, {
+      await api.put(`/produtos/${productId}`, formData, { 
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       Alert.alert('Sucesso', 'Produto atualizado!', [{ text: 'OK', onPress: () => router.back() }]);
-    } catch (error) {
-      console.error("Erro ao atualizar produto:", error);
-      Alert.alert('Erro', 'Não foi possível atualizar o produto.');
+    } catch (error: any) {
+      console.error("Erro ao atualizar produto:", error.response?.data || error.message);
+      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível atualizar o produto.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDelete = async () => {
+    if (!productId) return; 
+
     Alert.alert(
       'Confirmar Exclusão',
       `Tem certeza que deseja deletar o produto "${nome}"?`,
@@ -93,10 +128,11 @@ export default function EditProductScreen() {
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Deletar', style: 'destructive', onPress: async () => {
           try {
-            await api.delete(`/produtos/${product.id}`);
+            await api.delete(`/produtos/${productId}`); 
             Alert.alert('Sucesso', 'Produto deletado!', [{ text: 'OK', onPress: () => router.back() }]);
-          } catch (error) {
-            Alert.alert('Erro', 'Não foi possível deletar o produto.');
+          } catch (error: any) {
+            console.error("Erro ao deletar produto:", error.response?.data || error.message);
+            Alert.alert('Erro', error.response?.data?.message || 'Não foi possível deletar o produto.');
           }
         }}
       ]
@@ -105,8 +141,17 @@ export default function EditProductScreen() {
 
   const displayImageUri = novaImagem?.uri || (imagemAtualUrl ? `${ASSET_BASE_URL}/${imagemAtualUrl}?t=${new Date().getTime()}` : 'https://placehold.co/200x200/e2e8f0/e2e8f0?text=Img');
 
+  // Exibir indicador de carregamento enquanto o produto está sendo carregado
+  if (isLoadingProduct) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007BFF" />
+        <Text style={styles.loadingText}>Carregando produto...</Text>
+      </View>
+    );
+  }
+
   return (
-    // --- CORREÇÃO: TECLADO SOBREPONDO O CAMPO ---
     <KeyboardAvoidingView 
       style={{ flex: 1 }} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -131,7 +176,24 @@ export default function EditProductScreen() {
           <TextInput style={styles.input} value={preco} onChangeText={setPreco} keyboardType="numeric" placeholder="0,00" placeholderTextColor="#888"/>
           
           <Text style={styles.label}>Estoque</Text>
-          <TextInput style={styles.input} value={estoque} onChangeText={setEstoque} keyboardType="numeric" placeholder="Quantidade em estoque" placeholderTextColor="#888"/>
+          <TextInput 
+            style={styles.input} 
+            value={estoque} 
+            onChangeText={setEstoque} 
+            keyboardType="numeric" 
+            placeholder="Quantidade em estoque" 
+            placeholderTextColor="#888"
+          />
+
+          {/* Campo para Categoria do Produto */}
+          <Text style={styles.label}>Categoria do Produto</Text>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Categoria do Produto (ex: Bebidas, Laticínios)" 
+            placeholderTextColor="#888" 
+            value={categoria} 
+            onChangeText={setCategoria} 
+          />
 
           <View style={styles.buttonContainer}>
             {isSaving ? (
@@ -159,4 +221,15 @@ const styles = StyleSheet.create({
     imageContainer: { alignItems: 'center', marginBottom: 20 },
     productImage: { width: 150, height: 150, borderRadius: 10, backgroundColor: '#eee', marginBottom: 10 },
     imagePickerText: { color: '#007BFF', fontSize: 16, fontWeight: 'bold' },
+    loadingContainer: { 
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#fff',
+    },
+    loadingText: { 
+      marginTop: 10,
+      fontSize: 16,
+      color: '#666',
+    },
 });
