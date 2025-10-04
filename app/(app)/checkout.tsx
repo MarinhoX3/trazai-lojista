@@ -1,96 +1,76 @@
-import React, { useState } from 'react';
-import { View, Button, Alert, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { CardField, useStripe } from '@stripe/stripe-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Alert, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { useStripe } from '@stripe/stripe-react-native';
+import { useLocalSearchParams, router } from 'expo-router';
+import api from '@/src/api/api';
 
 const CheckoutScreen = () => {
-  const { createPaymentMethod } = useStripe();
-  const [isCardComplete, setIsCardComplete] = useState(false);
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [loading, setLoading] = useState(false);
 
-  // ADAPTE AQUI: Pegue os dados do pedido da sua fonte de dados (ex: state, navegação)
-  const pedido = {
-    id_cliente: 1,
-    id_loja: 3, // ID da "Pizzaria do Zé" que testamos
-    endereco_entrega: 'Rua de Teste, 456',
-    itens: [
-      { id_produto: 1, quantidade: 1 }, // Substitua por produtos reais
-    ]
-  };
+  const params = useLocalSearchParams();
+  const totalComissao = Number(params.totalComissao);
+  const lojaId = Number(params.lojaId);
+  const comissaoId = Number(params.comissaoId);
 
-  const handlePayPress = async () => {
-    if (!isCardComplete) {
-      Alert.alert("Erro", "Por favor, preencha todos os dados do cartão.");
-      return;
-    }
+  const initializeCheckout = async () => {
     setLoading(true);
 
     try {
-      // 1. Cria o método de pagamento seguro
-      const { paymentMethod, error } = await createPaymentMethod({
-  paymentMethodType: 'Card', // <-- Correto
-});
+      const response = await api.post('/checkout/create-payment-intent-comissao', {
+        amount: totalComissao * 100,
+        loja_id: lojaId,
+        comissao_id: comissaoId,
+      });
 
-      if (error) {
-        Alert.alert("Erro", error.message);
-        setLoading(false);
+      const { paymentIntent, ephemeralKey, customer } = response.data;
+
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: 'Sua Plataforma',
+        customerId: customer,
+        customerEphemeralKeySecret: ephemeralKey,
+        paymentIntentClientSecret: paymentIntent,
+        allowsDelayedPaymentMethods: true,
+      });
+
+      if (initError) {
+        Alert.alert('Erro ao inicializar pagamento', initError.message);
         return;
       }
 
-      // 2. Chama a sua API (backend) com o ID do método de pagamento
-      // MUITO IMPORTANTE: Substitua pela URL do seu backend.
-      // Se estiver testando no celular, use o IP da sua máquina na rede (ex: http://192.168.1.5:3000)
-      const response = await fetch('http://192.168.1.12:3000/api/pedidos', { // <<< MUDE AQUI
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...pedido, // Envia todos os dados do pedido
-          paymentMethodId: paymentMethod.id, // Envia o ID do pagamento gerado
-        }),
-      });
+      const { error: presentError } = await presentPaymentSheet();
 
-      const result = await response.json();
-
-      if (response.ok) {
-        Alert.alert("Sucesso!", result.message);
-        // Ex: router.push('/pedido-confirmado');
+      if (presentError) {
+        Alert.alert('Pagamento cancelado', presentError.message);
+        router.push('./pagamento-comissao-cancelado'); // rota relativa
       } else {
-        throw new Error(result.message);
+        
+        router.push('./pagamento-comissao-sucesso'); // rota relativa
       }
-
-    } catch (apiError: any) {
-      console.error("Erro ao chamar a API:", apiError);
-      Alert.alert("Erro no Pedido", apiError.message);
+    } catch (error) {
+      console.error('Erro ao iniciar o checkout:', error);
+      Alert.alert('Erro', 'Não foi possível iniciar o pagamento.');
+      router.push('./pagamento-comissao-cancelado'); // fallback
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (totalComissao > 0 && lojaId && comissaoId) {
+      initializeCheckout();
+    }
+  }, [totalComissao, lojaId, comissaoId]);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Finalizar Pagamento</Text>
-      
-      <Text style={styles.label}>Dados do Cartão de Crédito</Text>
-      <CardField
-        postalCodeEnabled={false}
-        onCardChange={(cardDetails) => {
-          setIsCardComplete(cardDetails.complete);
-        }}
-        style={styles.cardField}
-      />
-      
-      <View style={styles.buttonContainer}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#007BFF" />
-        ) : (
-          <Button 
-            title="Pagar Agora" 
-            onPress={handlePayPress} 
-            disabled={!isCardComplete || loading}
-          />
-        )}
-      </View>
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#007BFF" />
+      ) : (
+        <Text>O seu pagamento está pronto para ser processado.</Text>
+      )}
     </View>
   );
 };
@@ -98,6 +78,8 @@ const CheckoutScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
     backgroundColor: '#fff',
   },
@@ -107,21 +89,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 10,
-  },
-  cardField: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-  },
-  buttonContainer: {
-    marginTop: 40,
-  }
 });
 
 export default CheckoutScreen;

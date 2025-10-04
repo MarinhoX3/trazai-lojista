@@ -1,7 +1,5 @@
-// app/_layout.tsx (Principal - na raiz de app/)
-
 import React, { useEffect } from 'react';
-import { Stack, SplashScreen, useSegments } from 'expo-router'; // Removido 'useRouter' e 'Redirect'
+import { Stack, SplashScreen, useSegments } from 'expo-router';
 import { AuthLojaProvider, useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 import { PedidosAtivosProvider } from '../src/api/contexts/PedidosAtivosContext';
 import { View, ActivityIndicator, Text } from 'react-native';
@@ -14,7 +12,7 @@ export default function RootLayout() {
   return (
     <AuthLojaProvider>
       <PedidosAtivosProvider>
-        <StripeProvider publishableKey="pk_test_SUA_CHAVE_PUBLICAVEL_AQUI">
+        <StripeProvider publishableKey="pk_test_51RhcOyD1ANZNVvcx26pdZ0aueqotnqyYc7yP7QTKFNWvujPT6EwGCDwhzg1MeEbk5CENAaTEswgAYqn7KH5YMh6z00KcsS2jnS">
           <RootLayoutNav />
         </StripeProvider>
       </PedidosAtivosProvider>

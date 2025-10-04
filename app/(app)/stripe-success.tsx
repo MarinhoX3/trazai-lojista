@@ -13,7 +13,7 @@ export default function StripeSuccessScreen() {
     const timer = setTimeout(() => {
       // Após 3 segundos, redirecionamos o utilizador para o painel principal.
       // O 'replace' garante que o utilizador não consegue voltar para esta tela de sucesso.
-      router.replace('/dashboard');
+      router.replace('/financeiro');
     }, 3000); // 3000 milissegundos = 3 segundos
 
     // Esta é uma função de limpeza que será executada se a tela for "desmontada"

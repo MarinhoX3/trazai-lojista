@@ -4,14 +4,14 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  Pressable, // Mantido Pressable
+  Pressable,
   TextInput,
   SafeAreaView,
   Image,
   Dimensions,
-  TouchableOpacity, // Adicionado TouchableOpacity para o botão de adicionar
+  TouchableOpacity,
 } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router'; // Removido Link
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useState, useCallback, useMemo } from 'react';
 import api, { ASSET_BASE_URL } from '../../../src/api/api';
 import { useAuthLoja } from '../../../src/api/contexts/AuthLojaContext';
@@ -21,7 +21,7 @@ interface Produto {
   id: number;
   nome: string;
   preco: string;
-  estoque: string; // Manter como string para exibição, mas pode ser number no backend
+  estoque: string;
   url_foto: string | null;
 }
 
@@ -94,9 +94,8 @@ export default function DashboardScreen() {
       ? `${ASSET_BASE_URL}/${item.url_foto}?t=${new Date().getTime()}`
       : 'https://placehold.co/400x300/e2e8f0/e2e8f0?text=Sem+Imagem';
 
-    // Determina a cor do estoque
     const estoqueNumerico = parseInt(item.estoque, 10);
-    const estoqueCor = estoqueNumerico <= 5 ? 'red' : '#666'; // Vermelho se <= 5, cinza caso contrário
+    const estoqueCor = estoqueNumerico <= 5 ? 'red' : '#666';
 
     return (
       <Pressable
@@ -128,7 +127,6 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Barra de Busca e Botão Adicionar Produto */}
       <View style={styles.topControls}>
         <TextInput
           style={styles.barraBusca}
@@ -151,7 +149,6 @@ export default function DashboardScreen() {
         keyExtractor={(item) => item.id.toString()}
         numColumns={NUM_COLUMNS}
         columnWrapperStyle={styles.row}
-        // CORREÇÃO: ListEmptyComponent simplificado para um Text direto
         ListEmptyComponent={<Text style={styles.emptyListText}>Nenhum produto encontrado. Clique em "Adicionar Produto" para começar!</Text>}
         contentContainerStyle={styles.listaContentContainer}
         showsVerticalScrollIndicator={false}
@@ -260,15 +257,15 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   produtoCardPreco: {
-    fontSize: 15,
+    fontSize: 14, // REDUZIDO: de 15 para 14
     color: '#FF0000',
     fontWeight: '600',
   },
   produtoCardEstoque: {
-    fontSize: 13,
+    fontSize: 12, // REDUZIDO: de 13 para 12
     fontWeight: 'bold',
   },
-  emptyListContainer: { // Este estilo agora é redundante para ListEmptyComponent, mas pode ser mantido para referência
+  emptyListContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

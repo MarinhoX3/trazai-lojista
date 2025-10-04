@@ -1,13 +1,16 @@
-// src/api/api.js
-
 import axios from 'axios';
+import Constants from 'expo-constants';
 
-// URL base para arquivos estáticos (imagens, etc.)
-export const ASSET_BASE_URL = 'https://trazai.shop';
+// Adicione a porta 3000 à URL base
+const apiBaseUrl =
+  Constants.expoConfig?.extra?.apiBaseUrl ?? 'https://trazai.shop:3000';
+const assetBaseUrl =
+  Constants.expoConfig?.extra?.assetBaseUrl ?? 'https://trazai.shop:3000';
 
-// Instância do Axios para chamadas da API
 const api = axios.create({
-  baseURL: `${ASSET_BASE_URL}/api` // Continua como 'https://trazai.shop/api'
+  baseURL: `${apiBaseUrl}/api`,
 });
+
+export const ASSET_BASE_URL = assetBaseUrl;
 
 export default api;

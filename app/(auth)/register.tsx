@@ -1,17 +1,17 @@
-// app/(auth)/register.tsx (VERSÃO CORRIGIDA FINAL - COM CNPJ/CPF)
+// app/(auth)/register.tsx (VERSÃO CORRIGIDA FINAL - COM CNPJ/CPF E CATEGORIA)
 
 import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  Button, // Manter Button para o exemplo, mas ele tem limitação no title
+  Button,
   StyleSheet,
   Alert,
   ScrollView,
   SafeAreaView,
   Image,
-  Pressable, // Usar Pressable para botões customizados com ActivityIndicator
+  Pressable,
   Platform,
   ActivityIndicator
 } from 'react-native';
@@ -19,17 +19,34 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../src/api/api';
 import { useAuthLoja } from '../../src/api/contexts/AuthLojaContext';
+import { Picker } from '@react-native-picker/picker'; // NOVO: Importa o Picker
+
+// Lista de categorias para a loja (IDs devem corresponder aos valores no DB)
+const storeCategories = [
+  { id: '', name: 'Selecione uma categoria' }, // Opção padrão
+  { id: 'Acessórios', name: 'Acessórios' },
+  { id: 'Pet Shop', name: 'Pet Shop' },
+  { id: 'Mercearia', name: 'Mercearia' },
+  { id: 'Moda', name: 'Moda' },
+  { id: 'Casa & Decoração', name: 'Casa & Decoração' },
+  { id: 'Serviços', name: 'Serviços' },
+  { id: 'Eletrônicos', name: 'Eletrônicos' },
+  { id: 'Beleza', name: 'Beleza' },
+  { id: 'Saúde', name: 'Saúde' },
+  { id: 'Variedades', name: 'Variedades' }, // Adicionado para lojas com produtos diversos
+];
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { login } = useAuthLoja(); // Usaremos a função de login após o cadastro
+  const { login } = useAuthLoja();
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); // Renomeado para 'password' para clareza
+  const [password, setPassword] = useState('');
   const [nomeLoja, setNomeLoja] = useState('');
-  const [cnpjCpf, setCnpjCpf] = useState(''); // NOVO ESTADO PARA CNPJ/CPF
+  const [cnpjCpf, setCnpjCpf] = useState('');
   const [telefoneContato, setTelefoneContato] = useState('');
   const [enderecoLoja, setEnderecoLoja] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(storeCategories[0].id); // NOVO: Estado para a categoria selecionada
   const [logo, setLogo] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -53,30 +70,39 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-    // Adicione console.log para depurar os valores dos campos
     console.log('Valores dos campos antes da validação:');
     console.log('Email:', email);
     console.log('Senha:', password);
     console.log('Nome da Loja:', nomeLoja);
-    console.log('CNPJ/CPF:', cnpjCpf); // NOVO LOG
+    console.log('CNPJ/CPF:', cnpjCpf);
     console.log('Telefone de Contato:', telefoneContato);
     console.log('Endereço da Loja:', enderecoLoja);
+    console.log('Categoria Selecionada:', selectedCategory); // NOVO LOG
 
     // VALIDAÇÃO: Verifique se todos os campos obrigatórios estão preenchidos
-    if (!email.trim() || !password.trim() || !nomeLoja.trim() || !cnpjCpf.trim() || !telefoneContato.trim() || !enderecoLoja.trim()) { // ADICIONADO cnpjCpf.trim()
-      Alert.alert('Campos Obrigatórios', 'Por favor, preencha todos os campos obrigatórios.');
+    if (
+      !email.trim() ||
+      !password.trim() ||
+      !nomeLoja.trim() ||
+      !cnpjCpf.trim() ||
+      !telefoneContato.trim() ||
+      !enderecoLoja.trim() ||
+      !selectedCategory // NOVO: Valida se uma categoria foi selecionada
+    ) {
+      Alert.alert('Campos Obrigatórios', 'Por favor, preencha todos os campos obrigatórios, incluindo a categoria da loja.');
       return;
     }
 
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('email_login', email.trim()); // Use o nome do campo esperado pelo backend
-      formData.append('senha', password.trim()); // Use o nome do campo esperado pelo backend
+      formData.append('email_login', email.trim());
+      formData.append('senha', password.trim());
       formData.append('nome_loja', nomeLoja.trim());
-      formData.append('cnpj_cpf', cnpjCpf.trim()); // NOVO: ADICIONADO AO FORMDATA
+      formData.append('cnpj_cpf', cnpjCpf.trim());
       formData.append('telefone_contato', telefoneContato.trim());
       formData.append('endereco_loja', enderecoLoja.trim());
+      formData.append('categoria', selectedCategory); // NOVO: Adiciona a categoria ao formData
 
       if (logo) {
         const uri = logo.uri;
@@ -89,26 +115,22 @@ export default function RegisterScreen() {
         } as any);
       }
 
-      // IMPORTANTE: Seu endpoint de cadastro pode não retornar o token e dados da loja
-      // no mesmo formato do login. Ajuste conforme a resposta REAL do seu backend.
-      const response = await api.post('/lojas', formData, { // Verifique se o endpoint é '/lojas' para cadastro
+      const response = await api.post('/lojas', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      if (response.data.success) { // Assumindo que seu backend retorna { success: true }
+      if (response.data.success) {
         Alert.alert('Sucesso', 'Loja cadastrada com sucesso! Você será redirecionado para o login.', [
           {
             text: 'OK',
             onPress: () => {
-              // Redireciona para a tela de login. Use 'as any' para contornar a tipagem.
               router.replace('/(auth)/index' as any);
             },
           },
         ]);
       } else {
-        // Se o backend tiver uma lógica mais específica para 'success: false'
         Alert.alert('Erro no Cadastro', response.data.message || 'Não foi possível cadastrar a loja.');
       }
     } catch (error: any) {
@@ -121,8 +143,6 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* REMOVIDO: <Stack.Screen options={{ title: 'Cadastro de Loja' }} />
-          Isso deve ser definido apenas no _layout.tsx do grupo (auth) */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Cadastro da Loja</Text>
 
@@ -156,7 +176,6 @@ export default function RegisterScreen() {
           onChangeText={setNomeLoja}
         />
 
-        {/* NOVO CAMPO: CNPJ ou CPF */}
         <Text style={styles.label}>CNPJ ou CPF *</Text>
         <TextInput
           style={styles.input}
@@ -167,7 +186,6 @@ export default function RegisterScreen() {
           onChangeText={setCnpjCpf}
         />
 
-        {/* NOVOS CAMPOS EXISTENTES */}
         <Text style={styles.label}>Telefone de Contato *</Text>
         <TextInput
           style={styles.input}
@@ -188,6 +206,21 @@ export default function RegisterScreen() {
           onChangeText={setEnderecoLoja}
         />
 
+        {/* NOVO CAMPO: Seleção de Categoria */}
+        <Text style={styles.label}>Categoria da Loja *</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={selectedCategory}
+            onValueChange={(itemValue: string) => setSelectedCategory(itemValue)}
+            style={styles.picker}
+            itemStyle={styles.pickerItem} // Estilo para os itens do Picker (apenas iOS)
+          >
+            {storeCategories.map((cat) => (
+              <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+            ))}
+          </Picker>
+        </View>
+
         <Pressable onPress={pickImage} style={styles.imagePickerButton} disabled={loading}>
           {logo ? (
             <Image source={{ uri: logo.uri }} style={styles.logoPreview} />
@@ -195,9 +228,7 @@ export default function RegisterScreen() {
             <Text style={styles.imagePickerText}>Tocar para adicionar o logo da loja (Opcional)</Text>
           )}
         </Pressable>
-        {/* FIM DOS NOVOS CAMPOS */}
 
-        {/* Botão de Cadastro - Usando Pressable para permitir ActivityIndicator */}
         <Pressable
           style={({ pressed }) => [
             styles.registerButton,
@@ -258,6 +289,27 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  pickerContainer: { // NOVO: Estilo para o container do Picker
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 20,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    overflow: 'hidden', // Garante que o conteúdo do picker respeite as bordas
+  },
+  picker: { // NOVO: Estilo para o Picker
+    height: 50,
+    width: '100%',
+    color: '#333',
+  },
+  pickerItem: { // NOVO: Estilo para os itens do Picker (somente iOS)
+    fontSize: 16,
+  },
   imagePickerButton: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -280,7 +332,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
-  registerButton: { // Novo estilo para o botão de cadastro
+  registerButton: {
     backgroundColor: '#007BFF',
     paddingVertical: 15,
     borderRadius: 10,

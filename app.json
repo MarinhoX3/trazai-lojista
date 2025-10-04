@@ -42,6 +42,8 @@
       "typedRoutes": true
     },
     "extra": {
+      "apiBaseUrl": "https://trazai.shop",
+      "assetBaseUrl": "https://trazai.shop/uploads",
       "router": {},
       "eas": {
         "projectId": "09852f0c-9a00-455b-bbfc-c7de37bedf91"
