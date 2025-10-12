@@ -1,12 +1,11 @@
 import axios from 'axios';
 
-// CORREÇÃO: Use o endereço IP ou a URL com a porta correta
-const apiBaseUrl = 'http://trazai.shop:3000';
-const assetBaseUrl = 'http://trazai.shop:3000';
+// URL do backend via HTTPS + Nginx (proxy)
+const apiBaseUrl = 'https://trazai.shop';
+const assetBaseUrl = 'https://trazai.shop/uploads';
 
 const api = axios.create({
-  // A URL base agora aponta para o endereço correto do backend
-  baseURL: `${apiBaseUrl}/api`,
+  baseURL: `${apiBaseUrl}/api`, // já aponta para o proxy /api do Nginx
 });
 
 export const ASSET_BASE_URL = assetBaseUrl;
