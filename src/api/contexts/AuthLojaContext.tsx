@@ -1,5 +1,3 @@
-//AuthLojaContext.tsx
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
@@ -10,39 +8,40 @@ interface AuthLoja {
   id: number;
   nome_loja: string;
   email_login: string;
-  // Adicione outras propriedades da loja que você queira ter acesso fácil
-  taxa_entrega?: number; // NOVO: Adicionamos a taxa_entrega à interface
+  taxa_entrega?: number; 
 }
 
 // Define o que o contexto vai fornecer
 interface AuthLojaContextData {
   loja: AuthLoja | null;
-  token: string | null; // NOVO: Adicionamos o token aqui
-  login: (lojaData: AuthLoja, token: string) => Promise<void>; // MUDANÇA: A função de login agora também recebe o token
+  token: string | null; 
+  login: (lojaData: AuthLoja, token: string) => Promise<void>; 
   logout: () => Promise<void>;
   loading: boolean;
-  updateAuthLoja: (updatedData: Partial<AuthLoja>) => Promise<void>; // CORREÇÃO: Renomeado para updateAuthLoja
+  updateAuthLoja: (updatedData: Partial<AuthLoja>) => Promise<void>; 
 }
 
 const AuthLojaContext = createContext<AuthLojaContextData>({} as AuthLojaContextData);
 
 export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   const [loja, setLoja] = useState<AuthLoja | null>(null);
-  const [token, setToken] = useState<string | null>(null); // NOVO: Criamos um estado para guardar o token
+  const [token, setToken] = useState<string | null>(null); 
   const [loading, setLoading] = useState(true);
 
-  usePushNotifications(loja?.id);
+  // CORREÇÃO: Passando o ID da loja apenas se ela estiver logada.
+  // A função usePushNotifications deve ser responsável por checar o token.
+  usePushNotifications(loja?.id); 
 
   // Carrega os dados da loja e o token do armazenamento local ao iniciar
   useEffect(() => {
     async function loadStorageData() {
       const storedLoja = await AsyncStorage.getItem('@AppLojista:loja');
-      const storedToken = await AsyncStorage.getItem('@AppLojista:token'); // NOVO: Carregamos o token guardado
+      const storedToken = await AsyncStorage.getItem('@AppLojista:token'); 
 
       if (storedLoja && storedToken) {
         setLoja(JSON.parse(storedLoja));
         setToken(storedToken);
-        // NOVO: Configuramos o token no cabeçalho do axios
+        // Configura o token no cabeçalho do axios
         api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       }
       setLoading(false);
@@ -52,9 +51,9 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (lojaData: AuthLoja, authToken: string) => {
     setLoja(lojaData);
-    setToken(authToken); // NOVO: Guardamos o token no estado
+    setToken(authToken); 
     
-    // NOVO: Configuramos o token no cabeçalho do axios para todas as futuras requisições
+    // Configura o token no cabeçalho do axios para todas as futuras requisições
     api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
 
     // Guardamos ambos no armazenamento local
@@ -64,9 +63,9 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     setLoja(null);
-    setToken(null); // NOVO: Limpamos o token do estado
+    setToken(null); 
     
-    // NOVO: Removemos o token do cabeçalho do axios
+    // Removemos o token do cabeçalho do axios
     delete api.defaults.headers.common['Authorization'];
     
     // Removemos ambos do armazenamento local
@@ -74,7 +73,7 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.removeItem('@AppLojista:token');
   };
 
-  // CORREÇÃO: Renomeado de updateLojaContext para updateAuthLoja
+  // Atualiza dados da loja no estado e no AsyncStorage
   const updateAuthLoja = async (updatedData: Partial<AuthLoja>) => {
     setLoja(prevLoja => {
       if (!prevLoja) return null;
@@ -85,8 +84,7 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    // NOVO: Fornecemos o token para todo o aplicativo
-    // CORREÇÃO: Fornecer updateAuthLoja no contexto
+    // Fornecemos o token e as funções para todo o aplicativo
     <AuthLojaContext.Provider value={{ loja, token, login, logout, loading, updateAuthLoja }}>
       {children}
     </AuthLojaContext.Provider>

@@ -32,6 +32,7 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
+          headerShown: false, // Adicione esta linha
           tabBarShowLabel: true,
           tabBarActiveTintColor: '#007BFF',
           tabBarInactiveTintColor: '#555',
