@@ -1,8 +1,8 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useEffect, useState } from 'react';
 import api from '../../../src/api/api';
 import { useAuthLoja } from '../../../src/api/contexts/AuthLojaContext';
 
@@ -32,7 +32,7 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
-          headerShown: false, // Adicione esta linha
+          headerShown: false,
           tabBarShowLabel: true,
           tabBarActiveTintColor: '#007BFF',
           tabBarInactiveTintColor: '#555',
@@ -46,14 +46,16 @@ export default function TabLayout() {
           name="dashboard"
           options={{
             title: 'Início',
-            tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
+            tabBarIcon: ({ color }: { color: string }) => (
+              <Ionicons name="home" size={24} color={color} />
+            ),
           }}
         />
         <Tabs.Screen
           name="pedidos-loja"
           options={{
             title: 'Pedidos',
-            tabBarIcon: ({ color }) => (
+            tabBarIcon: ({ color }: { color: string }) => (
               <View>
                 <Ionicons name="receipt-outline" size={24} color={color} />
                 {contagemPedidos > 0 && (
@@ -69,14 +71,18 @@ export default function TabLayout() {
           name="financeiro"
           options={{
             title: 'Financeiro',
-            tabBarIcon: ({ color }) => <Ionicons name="wallet-outline" size={24} color={color} />,
+            tabBarIcon: ({ color }: { color: string }) => (
+              <Ionicons name="wallet-outline" size={24} color={color} />
+            ),
           }}
         />
         <Tabs.Screen
           name="edit-loja"
           options={{
             title: 'Perfil',
-            tabBarIcon: ({ color }) => <Ionicons name="person-circle-outline" size={24} color={color} />,
+            tabBarIcon: ({ color }: { color: string }) => (
+              <Ionicons name="person-circle-outline" size={24} color={color} />
+            ),
           }}
         />
       </Tabs>

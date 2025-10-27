@@ -26,7 +26,6 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="applojista"/>
-        <data android:scheme="exp+traz-ai-lojista"/>
       </intent-filter>
     </activity>
   </application>

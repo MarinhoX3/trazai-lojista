@@ -1,96 +1,97 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
-import api from '../api'; // Importamos a instância do axios
+import api from '../api';
 
 // Define o formato do objeto da loja logada
-interface AuthLoja {
+export interface AuthLoja {
   id: number;
   nome_loja: string;
   email_login: string;
-  taxa_entrega?: number; 
+  taxa_entrega?: number;
 }
 
 // Define o que o contexto vai fornecer
 interface AuthLojaContextData {
   loja: AuthLoja | null;
-  token: string | null; 
-  login: (lojaData: AuthLoja, token: string) => Promise<void>; 
-  logout: () => Promise<void>;
+  token: string | null;
   loading: boolean;
-  updateAuthLoja: (updatedData: Partial<AuthLoja>) => Promise<void>; 
+  login: (lojaData: AuthLoja, token: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateAuthLoja: (updatedData: Partial<AuthLoja>) => Promise<void>;
 }
 
 const AuthLojaContext = createContext<AuthLojaContextData>({} as AuthLojaContextData);
 
 export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   const [loja, setLoja] = useState<AuthLoja | null>(null);
-  const [token, setToken] = useState<string | null>(null); 
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // CORREÇÃO: Passando o ID da loja apenas se ela estiver logada.
-  // A função usePushNotifications deve ser responsável por checar o token.
-  usePushNotifications(loja?.id); 
+  // Inicializa push notifications se a loja estiver logada
+  usePushNotifications(loja?.id);
 
-  // Carrega os dados da loja e o token do armazenamento local ao iniciar
+  // Carrega dados do AsyncStorage ao iniciar
   useEffect(() => {
-    async function loadStorageData() {
-      const storedLoja = await AsyncStorage.getItem('@AppLojista:loja');
-      const storedToken = await AsyncStorage.getItem('@AppLojista:token'); 
+    const loadStorageData = async () => {
+      try {
+        const storedLoja = await AsyncStorage.getItem('@AppLojista:loja');
+        const storedToken = await AsyncStorage.getItem('@AppLojista:token');
 
-      if (storedLoja && storedToken) {
-        setLoja(JSON.parse(storedLoja));
-        setToken(storedToken);
-        // Configura o token no cabeçalho do axios
-        api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        if (storedLoja && storedToken) {
+          const parsedLoja: AuthLoja = JSON.parse(storedLoja);
+          setLoja(parsedLoja);
+          setToken(storedToken);
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados do AsyncStorage:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }
+    };
     loadStorageData();
   }, []);
 
+  // Função de login
   const login = async (lojaData: AuthLoja, authToken: string) => {
     setLoja(lojaData);
-    setToken(authToken); 
-    
-    // Configura o token no cabeçalho do axios para todas as futuras requisições
+    setToken(authToken);
     api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
 
-    // Guardamos ambos no armazenamento local
     await AsyncStorage.setItem('@AppLojista:loja', JSON.stringify(lojaData));
     await AsyncStorage.setItem('@AppLojista:token', authToken);
   };
 
+  // Função de logout
   const logout = async () => {
     setLoja(null);
-    setToken(null); 
-    
-    // Removemos o token do cabeçalho do axios
+    setToken(null);
     delete api.defaults.headers.common['Authorization'];
-    
-    // Removemos ambos do armazenamento local
+
     await AsyncStorage.removeItem('@AppLojista:loja');
     await AsyncStorage.removeItem('@AppLojista:token');
   };
 
-  // Atualiza dados da loja no estado e no AsyncStorage
+  // Atualiza dados da loja
   const updateAuthLoja = async (updatedData: Partial<AuthLoja>) => {
-    setLoja(prevLoja => {
-      if (!prevLoja) return null;
-      const newLojaState = { ...prevLoja, ...updatedData };
+    setLoja(prev => {
+      if (!prev) return null;
+      const newLojaState = { ...prev, ...updatedData };
       AsyncStorage.setItem('@AppLojista:loja', JSON.stringify(newLojaState));
       return newLojaState;
     });
   };
 
   return (
-    // Fornecemos o token e as funções para todo o aplicativo
-    <AuthLojaContext.Provider value={{ loja, token, login, logout, loading, updateAuthLoja }}>
+    <AuthLojaContext.Provider value={{ loja, token, loading, login, logout, updateAuthLoja }}>
       {children}
     </AuthLojaContext.Provider>
   );
 };
 
-export const useAuthLoja = () => {
-  return useContext(AuthLojaContext);
+export const useAuthLoja = (): AuthLojaContextData => {
+  const context = useContext(AuthLojaContext);
+  if (!context) throw new Error('useAuthLoja deve ser usado dentro de AuthLojaProvider');
+  return context;
 };
