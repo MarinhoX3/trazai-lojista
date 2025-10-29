@@ -3,7 +3,8 @@
     "appVersionSource": "local"
   },
   "build": {
-    "node": "18.17.0",
+    "node": {
+  "version": "18.17.0"},
     "development": {
       "developmentClient": true,
       "distribution": "internal",
