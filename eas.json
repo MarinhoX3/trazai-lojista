@@ -4,7 +4,8 @@
   },
   "build": {
     "node": {
-  "version": "18.17.0"},
+      "version": "18.17.0"
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",
