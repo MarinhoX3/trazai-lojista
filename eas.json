@@ -3,6 +3,7 @@
     "appVersionSource": "local"
   },
   "build": {
+    "node": "18.17.0",
     "development": {
       "developmentClient": true,
       "distribution": "internal",
@@ -14,13 +15,13 @@
         "simulator": true
       }
     },
-      "preview": {
+    "preview": {
       "distribution": "internal",
       "environment": "preview",
       "android": {
-      "buildType": "apk" 
+        "buildType": "apk"
       }
-   },
+    },
     "production": {
       "distribution": "store",
       "environment": "production",
