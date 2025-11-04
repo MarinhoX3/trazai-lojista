@@ -38,3 +38,6 @@ yarn-error.*
 
 app-example
 trazai-app-firebase-adminsdk-fbsvc-fa364144e0.json
+
+# Ignore backend folder
+meu-app-backend/
