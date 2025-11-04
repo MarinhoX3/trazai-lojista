@@ -12,13 +12,18 @@
       },
       "ios": {
         "simulator": true
-      }
+      },
+      "node": "18.18.0"
     },
     "preview": {
       "distribution": "internal",
       "environment": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "node": "18.18.0",
+      "npm": {
+        "version": ">=7"
       }
     },
     "production": {
@@ -30,6 +35,10 @@
       },
       "ios": {
         "simulator": false
+      },
+      "node": "18.18.0",
+      "npm": {
+        "version": ">=7"
       }
     }
   },
