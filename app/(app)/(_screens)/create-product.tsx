@@ -37,6 +37,19 @@ export default function CreateProductScreen() {
   const [imagem, setImagem] = useState<ImagePicker.ImagePickerAsset | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
+  const unidadeOptions = [
+    { label: "UN - Unidade", value: "UN" },
+    { label: "KG - Quilograma", value: "KG" },
+    { label: "G - Grama", value: "G" },
+    { label: "L - Litro", value: "L" },
+    { label: "ML - Mililitro", value: "ML" },
+    { label: "CX - Caixa", value: "CX" },
+    { label: "PCT - Pacote", value: "PCT" },
+    { label: "DZ - Dúzia", value: "DZ" },
+    { label: "M - Metro", value: "M" },
+    { label: "CM - Centímetro", value: "CM" },
+  ]
+
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (permissionResult.granted === false) {
@@ -45,6 +58,8 @@ export default function CreateProductScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
       quality: 1,
     })
     if (!result.canceled) {
@@ -213,13 +228,17 @@ export default function CreateProductScreen() {
               <Text style={styles.label}>
                 Unidade de Venda <Text style={styles.required}>*</Text>
               </Text>
-              <TextInput
-                style={styles.input}
-                placeholder="UN, KG, L, etc"
-                placeholderTextColor="#999"
-                value={unidade}
-                onChangeText={setUnidade}
-              />
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={unidade}
+                  onValueChange={(itemValue) => setUnidade(itemValue as string)}
+                  style={styles.picker}
+                >
+                  {unidadeOptions.map((option) => (
+                    <Picker.Item key={option.value} label={option.label} value={option.value} />
+                  ))}
+                </Picker>
+              </View>
             </View>
           </View>
 

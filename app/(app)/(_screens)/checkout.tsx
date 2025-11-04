@@ -17,9 +17,9 @@ const CheckoutScreen = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/checkout/create-payment-intent-comissao', {
+      const response = await api.post('/payments/create-payment-intent', {
         amount: totalComissao * 100,
-        loja_id: lojaId,
+        lojaId: lojaId,
         comissao_id: comissaoId,
       });
 

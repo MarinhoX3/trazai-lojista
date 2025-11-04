@@ -14,6 +14,8 @@ import {
 } from "react-native"
 import { Stack, useLocalSearchParams } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
+import * as Print from "expo-print"
+
 type PedidoItem = {
   nome_produto: string
   quantidade: number | string
@@ -91,6 +93,180 @@ ${itensTexto}
 💰 TOTAL: R$ ${Number.parseFloat(String(pedido.valor_total)).toFixed(2)}
 ━━━━━━━━━━━━━━━━━━━━━━
     `.trim()
+  }
+
+  const handleImprimir = async () => {
+    if (!pedido) {
+      Alert.alert("Erro", "Não há dados para imprimir.")
+      return
+    }
+
+    const itensHtml = pedido.itens
+      .map(
+        (item: PedidoDetalhes["itens"][0]) => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #eee;">
+            <span style="background-color: #D80032; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold; display: inline-block;">
+              ${Number.parseInt(String(item.quantidade), 10)}x
+            </span>
+          </td>
+          <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.nome_produto}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold; color: #D80032;">
+            R$ ${Number.parseFloat(String(item.preco_unitario_congelado)).toFixed(2)}
+          </td>
+        </tr>
+      `,
+      )
+      .join("")
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 20px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #e0e0e0;
+              padding-bottom: 20px;
+            }
+            .store-name {
+              font-size: 28px;
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+            .order-number {
+              background-color: #D80032;
+              color: white;
+              padding: 8px 16px;
+              border-radius: 20px;
+              display: inline-block;
+              font-size: 18px;
+              font-weight: bold;
+            }
+            .date {
+              color: #666;
+              margin-top: 10px;
+              font-size: 14px;
+            }
+            .section {
+              margin: 30px 0;
+            }
+            .section-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 15px;
+              color: #333;
+            }
+            .info-row {
+              display: flex;
+              margin-bottom: 10px;
+              font-size: 14px;
+            }
+            .info-label {
+              font-weight: bold;
+              min-width: 120px;
+              color: #666;
+            }
+            .info-value {
+              color: #333;
+            }
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 15px;
+            }
+            .items-table th {
+              background-color: #f5f5f5;
+              padding: 12px;
+              text-align: left;
+              font-weight: bold;
+              border-bottom: 2px solid #ddd;
+            }
+            .total-section {
+              background-color: #f5f5f5;
+              padding: 20px;
+              border-radius: 8px;
+              margin-top: 30px;
+              text-align: center;
+            }
+            .total-label {
+              font-size: 18px;
+              color: #666;
+              margin-bottom: 10px;
+            }
+            .total-value {
+              font-size: 32px;
+              font-weight: bold;
+              color: #D80032;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="store-name">${pedido.nome_loja}</div>
+            <div class="order-number">#${pedido.id}</div>
+            <div class="date">${new Date(pedido.data_hora).toLocaleString("pt-BR")}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">📋 Dados do Cliente</div>
+            <div class="info-row">
+              <div class="info-label">Nome:</div>
+              <div class="info-value">${pedido.nome_cliente}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Telefone:</div>
+              <div class="info-value">${pedido.telefone_cliente}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Endereço:</div>
+              <div class="info-value">${pedido.endereco_entrega}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Pagamento:</div>
+              <div class="info-value">${pedido.forma_pagamento}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🛒 Itens do Pedido</div>
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Qtd</th>
+                  <th>Produto</th>
+                  <th style="text-align: right;">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itensHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="total-section">
+            <div class="total-label">Total do Pedido</div>
+            <div class="total-value">R$ ${Number.parseFloat(String(pedido.valor_total)).toFixed(2)}</div>
+          </div>
+        </body>
+      </html>
+    `
+
+    try {
+      await Print.printAsync({ html })
+    } catch (error) {
+      console.error("Erro ao imprimir:", error)
+      Alert.alert("Erro", "Não foi possível imprimir o cupom.")
+    }
   }
 
   const handleCompartilhar = async () => {
@@ -203,6 +379,14 @@ ${itensTexto}
             <Text style={styles.totalValue}>R$ {Number.parseFloat(String(pedido.valor_total)).toFixed(2)}</Text>
           </View>
         </View>
+
+        <Pressable
+          style={({ pressed }) => [styles.printButton, pressed && styles.printButtonPressed]}
+          onPress={handleImprimir}
+        >
+          <Ionicons name="print-outline" size={24} color="#fff" />
+          <Text style={styles.printButtonText}>Imprimir Cupom</Text>
+        </Pressable>
 
         <Pressable
           style={({ pressed }) => [styles.shareButton, pressed && styles.shareButtonPressed]}
@@ -369,12 +553,36 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#D80032",
   },
+  printButton: {
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: "#007AFF",
+    padding: 16,
+    marginTop: 20,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  printButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  printButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
   shareButton: {
     flexDirection: "row",
     gap: 10,
     backgroundColor: "#D80032",
     padding: 16,
-    marginTop: 20,
+    marginTop: 12,
     marginBottom: 20,
     borderRadius: 12,
     justifyContent: "center",

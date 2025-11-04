@@ -1,61 +1,63 @@
-// app/edit-loja.tsx
+"use client"
 
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  Button, 
-  StyleSheet, 
-  Alert, 
-  ScrollView, 
-  SafeAreaView, 
-  ActivityIndicator, 
-  Image, 
-  Pressable, 
-  Platform 
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import * as Linking from 'expo-linking';
-import api, { ASSET_BASE_URL } from '../../../src/api/api';
-import { useAuthLoja } from '../../../src/api/contexts/AuthLojaContext'; 
+import { useState, useEffect } from "react"
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
+  Image,
+  Pressable,
+  Platform,
+  TouchableOpacity,
+  Linking,
+} from "react-native"
+import { useRouter } from "expo-router"
+import * as ImagePicker from "expo-image-picker"
+import { Ionicons } from "@expo/vector-icons"
+import api, { ASSET_BASE_URL } from "../../../src/api/api"
+import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext"
 
 export default function EditLojaScreen() {
-  const router = useRouter();
-  const { loja, token, logout } = useAuthLoja();
+  const router = useRouter()
+  const { loja, token, logout } = useAuthLoja()
 
-  const [nome, setNome] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [endereco, setEndereco] = useState('');
-  const [logo, setLogo] = useState<ImagePicker.ImagePickerAsset | null>(null);
-  const [logoAtualUrl, setLogoAtualUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [stripeLoading, setStripeLoading] = useState(false);
+  const [nome, setNome] = useState("")
+  const [telefone, setTelefone] = useState("")
+  const [endereco, setEndereco] = useState("")
+  const [logo, setLogo] = useState<ImagePicker.ImagePickerAsset | null>(null)
+  const [logoAtualUrl, setLogoAtualUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [stripeLoading, setStripeLoading] = useState(false)
 
   useEffect(() => {
     if (!loja?.id) {
-        setLoading(false);
-        return;
-    };
+      setLoading(false)
+      return
+    }
 
     const fetchLojaData = async () => {
       try {
-        const response = await api.get(`/lojas/${loja.id}`);
-        const { nome_loja, telefone_contato, endereco_loja, url_logo } = response.data;
-        setNome(nome_loja || '');
-        setTelefone(telefone_contato || '');
-        setEndereco(endereco_loja || '');
-        setLogoAtualUrl(url_logo);
+        const response = await api.get(`/lojas/${loja.id}`)
+        const { nome_loja, telefone_contato, endereco_loja, url_logo } = response.data
+        setNome(nome_loja || "")
+        setTelefone(telefone_contato || "")
+        setEndereco(endereco_loja || "")
+        setLogoAtualUrl(url_logo)
       } catch (error) {
-        Alert.alert("Erro", "Não foi possível carregar os dados da sua loja para edição.");
+        Alert.alert("Erro", "Não foi possível carregar os dados da sua loja para edição.")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    
-    fetchLojaData();
-  }, [loja?.id]);
+    }
+
+    fetchLojaData()
+  }, [loja?.id])
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -63,119 +65,158 @@ export default function EditLojaScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
-    });
+    })
 
     if (!result.canceled) {
-      setLogo(result.assets[0]);
+      setLogo(result.assets[0])
     }
-  };
+  }
 
   const handleUpdate = async () => {
     if (!loja?.id) {
-        Alert.alert('Erro de Autenticação', 'Não foi possível identificar a sua loja. Por favor, faça login novamente.');
-        return;
+      Alert.alert("Erro de Autenticação", "Não foi possível identificar a sua loja. Por favor, faça login novamente.")
+      return
     }
 
-    const formData = new FormData();
-    formData.append('nome_loja', nome);
-    formData.append('telefone_contato', telefone);
-    formData.append('endereco_loja', endereco);
+    const formData = new FormData()
+    formData.append("nome_loja", nome)
+    formData.append("telefone_contato", telefone)
+    formData.append("endereco_loja", endereco)
 
     if (logo) {
-      const uri = logo.uri;
-      const uriParts = uri.split('.');
-      const fileType = uriParts[uriParts.length - 1];
-      formData.append('logo', {
-        uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+      const uri = logo.uri
+      const uriParts = uri.split(".")
+      const fileType = uriParts[uriParts.length - 1]
+      formData.append("logo", {
+        uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
         name: `logo.${fileType}`,
         type: `image/${fileType}`,
-      } as any);
+      } as any)
     }
-    
+
     try {
       await api.put(`/lojas/${loja.id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      
-      // Atualize o contexto da loja aqui se necessário, caso tenha função para isso
+        headers: { "Content-Type": "multipart/form-data" },
+      })
 
-      Alert.alert('Sucesso', 'Os dados da sua loja foram atualizados!', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      Alert.alert("Sucesso", "Os dados da sua loja foram atualizados!", [{ text: "OK", onPress: () => router.back() }])
     } catch (error) {
-      console.error(error);
-      Alert.alert('Erro', 'Não foi possível atualizar os dados da loja.');
+      console.error(error)
+      Alert.alert("Erro", "Não foi possível atualizar os dados da loja.")
     }
-  };
+  }
 
   const handleConnectStripe = async () => {
     if (!loja || !token) {
-      Alert.alert("Erro", "Não foi possível identificar os dados de autenticação da sua loja.");
-      return;
+      Alert.alert("Erro", "Não foi possível identificar os dados de autenticação da sua loja.")
+      return
     }
-    setStripeLoading(true);
+    setStripeLoading(true)
     try {
-      const response = await api.post('/lojas/criar-link-stripe', { id_loja: loja.id });
+      const response = await api.post("/lojas/criar-link-stripe", { id_loja: loja.id })
 
-      const { url } = response.data;
-      const supported = await Linking.canOpenURL(url);
+      const { url } = response.data
+      const supported = await Linking.canOpenURL(url)
 
       if (supported) {
-        await Linking.openURL(url);
+        await Linking.openURL(url)
       } else {
-        Alert.alert("Erro", `Não foi possível abrir o link: ${url}`);
+        Alert.alert("Erro", `Não foi possível abrir o link: ${url}`)
       }
-
     } catch (error: any) {
-      console.error("Erro ao iniciar cadastro Stripe:", error);
-      const mensagem = error.response?.data?.message || "Ocorreu um erro. Tente novamente.";
-      Alert.alert("Erro", mensagem);
+      console.error("Erro ao iniciar cadastro Stripe:", error)
+      const mensagem = error.response?.data?.message || "Ocorreu um erro. Tente novamente."
+      Alert.alert("Erro", mensagem)
     } finally {
-      setStripeLoading(false);
+      setStripeLoading(false)
     }
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      "Sair",
-      "Tem a certeza de que deseja sair da sua conta?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Sim, Sair", style: "destructive", onPress: async () => {
-            await logout();
-            // CORREÇÃO AQUI: Redireciona para a rota raiz.
-            // O app/_layout.tsx irá então redirecionar para /(auth)/index se não houver loja logada.
-            router.replace('/' as any); 
-        }}
-      ]
-    );
-  };
-  
-  if (loading) {
-    return <View style={styles.container}><ActivityIndicator size="large" /></View>;
   }
 
-  const displayImageUri = logo?.uri || (logoAtualUrl ? `${ASSET_BASE_URL}/${logoAtualUrl}?t=${new Date().getTime()}` : 'https://placehold.co/150x150/e2e8f0/e2e8f0?text=Logo');
+  const handleNavigateToHelp = () => {
+    router.push("/ajuda" as any)
+  }
+
+  const handleContactSupport = async () => {
+    const email = "trazai_shop@outlook.com"
+    const subject = "Suporte - App Lojista TRAZAÍ"
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`
+
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl)
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl)
+      } else {
+        Alert.alert("Email de Suporte", `Entre em contato conosco através do email:\n\n${email}`, [{ text: "OK" }])
+      }
+    } catch (error) {
+      Alert.alert("Email de Suporte", `Entre em contato conosco através do email:\n\n${email}`, [{ text: "OK" }])
+    }
+  }
+
+  const handleLogout = () => {
+    Alert.alert("Sair", "Tem a certeza de que deseja sair da sua conta?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Sim, Sair",
+        style: "destructive",
+        onPress: async () => {
+          await logout()
+          router.replace("/" as any)
+        },
+      },
+    ])
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" />
+      </View>
+    )
+  }
+
+  const displayImageUri =
+    logo?.uri ||
+    (logoAtualUrl
+      ? `${ASSET_BASE_URL}/${logoAtualUrl}?t=${new Date().getTime()}`
+      : "https://placehold.co/150x150/e2e8f0/e2e8f0?text=Logo")
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* O Stack.Screen aqui deve ser usado no _layout.tsx, não na tela */}
-      {/* Remova: <Stack.Screen options={{ title: 'Editar Dados da Loja' }} /> se o cabeçalho for definido no _layout.tsx */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        
         <Pressable onPress={pickImage} style={styles.imageContainer}>
           <Image source={{ uri: displayImageUri }} style={styles.profileImage} />
           <Text style={styles.imagePickerText}>Tocar para alterar o logo</Text>
         </Pressable>
-        
+
         <Text style={styles.label}>Nome da Loja</Text>
-        <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Nome da sua loja" placeholderTextColor="#888"/>
-        
+        <TextInput
+          style={styles.input}
+          value={nome}
+          onChangeText={setNome}
+          placeholder="Nome da sua loja"
+          placeholderTextColor="#888"
+        />
+
         <Text style={styles.label}>Telefone de Contato</Text>
-        <TextInput style={styles.input} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="(XX) XXXXX-XXXX" placeholderTextColor="#888"/>
-        
+        <TextInput
+          style={styles.input}
+          value={telefone}
+          onChangeText={setTelefone}
+          keyboardType="phone-pad"
+          placeholder="(XX) XXXXX-XXXX"
+          placeholderTextColor="#888"
+        />
+
         <Text style={styles.label}>Endereço da Loja</Text>
-        <TextInput style={styles.input} value={endereco} onChangeText={setEndereco} multiline placeholder="Rua, Número, Bairro, Cidade" placeholderTextColor="#888"/>
+        <TextInput
+          style={styles.input}
+          value={endereco}
+          onChangeText={setEndereco}
+          multiline
+          placeholder="Rua, Número, Bairro, Cidade"
+          placeholderTextColor="#888"
+        />
 
         <View style={styles.buttonContainer}>
           <Button title="Salvar Alterações" onPress={handleUpdate} />
@@ -186,48 +227,102 @@ export default function EditLojaScreen() {
         <Text style={styles.sectionDescription}>
           Conecte-se à nossa plataforma para começar a receber pagamentos online com segurança.
         </Text>
-        <Button 
-          title={stripeLoading ? "Aguarde..." : "Configurar Pagamentos"} 
-          onPress={handleConnectStripe} 
+        <Button
+          title={stripeLoading ? "Aguarde..." : "Configurar Pagamentos"}
+          onPress={handleConnectStripe}
           disabled={stripeLoading}
           color="#6772E5"
         />
 
+        <TouchableOpacity style={styles.helpButton} onPress={handleNavigateToHelp}>
+          <Ionicons name="help-circle-outline" size={24} color="#16A34A" />
+          <Text style={styles.helpButtonText}>Central de Ajuda</Text>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
+          <Ionicons name="mail-outline" size={24} color="#2563EB" />
+          <Text style={styles.supportButtonText}>Falar com Suporte</Text>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+
         <View style={styles.logoutButtonContainer}>
-            <Button title="Sair (Logout)" color="red" onPress={handleLogout} />
+          <Button title="Sair (Logout)" color="red" onPress={handleLogout} />
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: "#fff" },
   scrollContent: { padding: 20, paddingBottom: 40 },
-  titulo: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
-  imageContainer: { alignItems: 'center', marginBottom: 30 },
-  profileImage: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#eee', marginBottom: 10 },
-  imagePickerText: { textAlign: 'center', color: '#007BFF' },
-  label: { fontSize: 16, fontWeight: '600', marginBottom: 5, color: '#333' },
-  input: { height: 50, borderColor: '#ccc', borderWidth: 1, borderRadius: 8, marginBottom: 20, paddingHorizontal: 15, fontSize: 16 },
+  titulo: { fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
+  imageContainer: { alignItems: "center", marginBottom: 30 },
+  profileImage: { width: 120, height: 120, borderRadius: 60, backgroundColor: "#eee", marginBottom: 10 },
+  imagePickerText: { textAlign: "center", color: "#007BFF" },
+  label: { fontSize: 16, fontWeight: "600", marginBottom: 5, color: "#333" },
+  input: {
+    height: 50,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 20,
+    paddingHorizontal: 15,
+    fontSize: 16,
+  },
   buttonContainer: { marginTop: 10 },
   divider: {
-    borderBottomColor: '#ccc',
+    borderBottomColor: "#ccc",
     borderBottomWidth: 1,
     marginVertical: 30,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   sectionDescription: {
     fontSize: 14,
-    color: '#555',
+    color: "#555",
     marginBottom: 20,
     lineHeight: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  logoutButtonContainer: { marginTop: 30, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#eee' },
-});
+  helpButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 30,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  helpButtonText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#16A34A",
+    marginLeft: 12,
+  },
+  supportButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 15,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  supportButtonText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2563EB",
+    marginLeft: 12,
+  },
+  logoutButtonContainer: { marginTop: 30, paddingTop: 20, borderTopWidth: 1, borderTopColor: "#eee" },
+})

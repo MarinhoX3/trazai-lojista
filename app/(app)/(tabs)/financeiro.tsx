@@ -1,302 +1,279 @@
-import React, { useState, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { Stack, useFocusEffect, router } from 'expo-router';
-import { useAuthLoja } from '../../../src/api/contexts/AuthLojaContext';
-import api from '../../../src/api/api';
-import { Ionicons } from '@expo/vector-icons';
+"use client"
 
-export default function financeiro() {
-  const { loja } = useAuthLoja();
-  const [totalComissao, setTotalComissao] = useState(0);
-  const [comissaoId, setComissaoId] = useState<number | null>(null);
-  const [taxaEntrega, setTaxaEntrega] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [savingDeliveryFee, setSavingDeliveryFee] = useState(false);
+import { useState, useCallback, useRef } from "react"
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from "react-native"
+import { useFocusEffect } from "@react-navigation/native"
+import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext"
+import api from "../../../src/api/api"
+import { Ionicons } from "@expo/vector-icons"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useStripe, StripeProvider } from '@stripe/stripe-react-native'
 
-  const fetchedLojaIdRef = useRef<number | null>(null);
-
-  const fetchDadosFinanceiros = useCallback(async () => {
-    if (!loja?.id) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // CORREÇÃO: Pegando as chaves que o servidor ATUALMENTE retorna ('comissaoId' e 'valorPendente').
-      const comissoesResponse = await api.get(`/payments/comissoes-pendentes/${loja.id}`);
-      const { valorPendente, comissaoId: fetchedComissaoId } = comissoesResponse.data;
-
-      // Garante que valorPendente é um número válido antes de setar o estado
-      if (!isNaN(parseFloat(valorPendente))) {
-        setTotalComissao(parseFloat(valorPendente));
-        setComissaoId(fetchedComissaoId);
-      } else {
-        setTotalComissao(0);
-        setComissaoId(null);
-      }
-
-      // Busca a Taxa de Entrega
-      const lojaDetailsResponse = await api.get(`/lojas/${loja.id}`);
-      const taxaRecebida = lojaDetailsResponse.data.taxa_entrega;
-      if (taxaRecebida !== undefined && taxaRecebida !== null) {
-        setTaxaEntrega(String(parseFloat(taxaRecebida).toFixed(2)));
-      } else {
-        setTaxaEntrega('0.00');
-      }
-
-      fetchedLojaIdRef.current = loja.id;
-
-    } catch (error: any) {
-      console.error("Erro ao buscar dados financeiros:", error.response?.data || error.message);
-      Alert.alert("Erro", "Não foi possível carregar os dados financeiros.");
-      setTotalComissao(0);
-      setComissaoId(null);
-      setTaxaEntrega('0.00');
-    } finally {
-      setLoading(false);
-    }
-  }, [loja?.id]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchDadosFinanceiros();
-    }, [fetchDadosFinanceiros])
-  );
-
-  const handlePagarComissao = async () => {
-    if (!loja?.id || totalComissao <= 0) {
-      Alert.alert("Tudo em dia!", "Você não tem comissões pendentes para pagar.");
-      return;
-    }
-
-    if (!comissaoId) {
-      // Se comissaoId não está definido, precisamos chamar a API para obter a URL de pagamento
-      // (a função criarLinkPagamentoComissao no backend)
-      
-      try {
-        setPaymentLoading(true);
-        // Chama o endpoint que cria a sessão de pagamento (Stripe Checkout)
-        const response = await api.post(`/lojas/${loja.id}/pagar-comissao`);
-        const urlPagamento = response.data?.url;
-
-        if (urlPagamento) {
-          router.push(urlPagamento); // Abre a página de checkout da Stripe
-        } else {
-          Alert.alert("Erro", "Não foi possível obter a URL de pagamento.");
-        }
-      } catch (error: any) {
-        console.error("Erro ao iniciar pagamento:", error.response?.data || error.message);
-        Alert.alert("Erro", "Ocorreu um erro ao iniciar o pagamento.");
-      } finally {
-        setPaymentLoading(false);
-      }
-      
-    } else {
-      // Caso a API antiga estivesse sendo usada e retornasse o comissaoId diretamente
-      // (Mantido para compatibilidade se o backend for atualizado para essa lógica)
-      router.push({
-        pathname: "/checkout",
-        params: {
-          totalComissao: totalComissao.toFixed(2),
-          lojaId: loja.id,
-          comissaoId: comissaoId,
-        },
-      });
-    }
-  };
-
-  const handleSalvarTaxaEntrega = async () => {
-    if (!loja?.id) return;
-
-    setSavingDeliveryFee(true);
-    try {
-      const parsedTaxa = parseFloat(taxaEntrega.replace(',', '.'));
-      if (isNaN(parsedTaxa) || parsedTaxa < 0) {
-        Alert.alert("Erro", "Por favor, insira um valor numérico válido e positivo para a taxa de entrega.");
-        return;
-      }
-
-      const response = await api.put(`/lojas/${loja.id}/taxa-entrega`, { taxa_entrega: parsedTaxa });
-
-      Alert.alert("Sucesso", response.data.message || "Taxa de entrega atualizada com sucesso!");
-      fetchDadosFinanceiros();
-
-    } catch (error: any) {
-      const message = error.response?.data?.message || "Não foi possível salvar a taxa de entrega.";
-      console.error("Erro ao salvar taxa de entrega:", error.response?.data || error.message);
-      Alert.alert("Erro", message);
-    } finally {
-      setSavingDeliveryFee(false);
-    }
-  };
-
+export default function App() {
   return (
-    <KeyboardAvoidingView
-      style={styles.fullScreenContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <Stack.Screen options={{ title: 'Financeiro' }} />
-        <Ionicons name="cash-outline" size={80} color="#28a745" />
-        <Text style={styles.title}>Suas Comissões</Text>
-        <Text style={styles.subtitle}>
-          Este é o valor total a ser pago à plataforma referente aos pedidos
-          em Dinheiro e Pix.
-        </Text>
-
-        {loading ? (
-          <ActivityIndicator size="large" color="#007BFF" />
-        ) : (
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Valor Pendente</Text>
-            <Text style={styles.cardValue}>
-              R$ {Number(totalComissao).toFixed(2)}
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.buttonContainer}>
-          {paymentLoading ? (
-            <ActivityIndicator color="#007BFF" />
-          ) : (
-            <Pressable 
-              style={[styles.payButton, totalComissao <= 0 && { backgroundColor: '#adb5bd' }]} 
-              onPress={handlePagarComissao}
-              disabled={totalComissao <= 0}
-            >
-              <Text style={styles.payButtonText}>Efetuar Pagamento da Comissão</Text>
-            </Pressable>
-          )}
-        </View>
-
-        <View style={styles.sectionDivider} />
-        <Text style={styles.title}>Configurar Taxa de Entrega</Text>
-        <Text style={styles.subtitle}>
-          Defina o valor que sua loja cobrará por entrega.
-        </Text>
-
-        {loading ? (
-          <ActivityIndicator size="small" color="#007BFF" />
-        ) : (
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Valor da Taxa (R$)</Text>
-            <TextInput
-              style={styles.deliveryFeeInput}
-              value={taxaEntrega}
-              onChangeText={setTaxaEntrega}
-              keyboardType="numeric"
-              placeholder="Ex: 5.00"
-              placeholderTextColor="#888"
-              returnKeyType="done"
-              onSubmitEditing={handleSalvarTaxaEntrega}
-            />
-            <Pressable
-              style={styles.saveButton}
-              onPress={handleSalvarTaxaEntrega}
-              disabled={savingDeliveryFee}
-            >
-              {savingDeliveryFee ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.saveButtonText}>Salvar Taxa de Entrega</Text>
-              )}
-            </Pressable>
-          </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <StripeProvider publishableKey="pk_live_51RhcOpDK4gB80CI0e18vr6pZQDfX3jKom5lbMWEWJnxunMh4LqU6JZk7qH4pI8lONxtmVZfzWQaKAvfXwkR0fpZb00m8CtjxcG">
+      <Financeiro />
+    </StripeProvider>
   );
 }
 
+function Financeiro() {
+  const { loja } = useAuthLoja()
+  const stripe = useStripe()
+
+  const [totalComissao, setTotalComissao] = useState(0)
+  const [comissaoId, setComissaoId] = useState<number | null>(null)
+  const [saldoDisponivel, setSaldoDisponivel] = useState(0)
+  const [proximaTransferencia, setProximaTransferencia] = useState<string | null>(null)
+  const [taxaEntrega, setTaxaEntrega] = useState<string>("")
+  const [loading, setLoading] = useState(true)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [savingDeliveryFee, setSavingDeliveryFee] = useState(false)
+
+  const fetchedLojaIdRef = useRef<number | null>(null)
+  const insets = useSafeAreaInsets()
+
+const fetchDadosFinanceiros = useCallback(async () => {
+  if (!loja?.id) return;
+
+  setLoading(true);
+
+  try {
+    // ✅ Sando disponível e próxima transferência
+    const saldoResponse = await api.get(`/payments/saldo-disponivel/${loja.id}`);
+    setSaldoDisponivel(Number(saldoResponse.data.saldo) || 0);
+    setProximaTransferencia(saldoResponse.data.proximaTransferencia || null);
+
+    // ✅ Comissões pendentes (cálculo real do banco)
+    const comissoesResponse = await api.get(`/payments/comissoes-pendentes/${loja.id}`);
+    const { valorPendente, comissaoId } = comissoesResponse.data;
+
+    setTotalComissao(Number(valorPendente) || 0);
+    setComissaoId(comissaoId ?? null);
+
+    // ✅ Taxa de entrega
+    const lojaResponse = await api.get(`/lojas/${loja.id}`);
+    setTaxaEntrega(String(Number(lojaResponse.data.taxa_entrega || 0).toFixed(2)));
+
+  } catch (err) {
+    console.log("Erro ao carregar financeiro:", err);
+    Alert.alert("Erro", "Não foi possível carregar os dados financeiros.");
+  }
+
+  setLoading(false);
+}, [loja?.id]);
+
+
+  useFocusEffect(
+    useCallback(() => {
+      if (loja?.id && loja.id !== fetchedLojaIdRef.current) {
+        fetchDadosFinanceiros()
+      }
+    }, [loja?.id, fetchDadosFinanceiros])
+  )
+
+  const handlePayment = async () => {
+  if (totalComissao <= 0 || !loja?.id) {
+    Alert.alert("Aviso", "Não há comissão pendente para pagar.");
+    return;
+  }
+
+  setPaymentLoading(true);
+  try {
+    const response = await api.post("/payments/create-payment-intent", {
+      amount: totalComissao,
+      lojaId: loja.id,
+    });
+
+    const { clientSecret } = response.data;
+    if (!clientSecret) throw new Error("clientSecret ausente.");
+
+    const { error: initError } = await stripe.initPaymentSheet({
+      merchantDisplayName: "TrazAí Plataforma",
+      paymentIntentClientSecret: clientSecret,
+    });
+
+    if (initError) {
+      Alert.alert("Erro", initError.message);
+      return;
+    }
+
+    const { error: presentError } = await stripe.presentPaymentSheet();
+    if (presentError) {
+      Alert.alert("Cancelado", presentError.message);
+      return;
+    }
+
+    await api.post("/payments/confirmar-pagamento", {
+      lojaId: loja.id,
+      paymentIntentId: clientSecret.split("_secret")[0],
+    });
+
+    Alert.alert("Pagamento confirmado!", "Obrigado.");
+
+    // ✅ Atualiza valores corretamente
+    setTotalComissao(0);
+    setComissaoId(null);
+
+    fetchDadosFinanceiros();
+
+  } catch (error) {
+    console.log("Pagamento erro:", error);
+    Alert.alert("Erro", "Falha ao processar pagamento.");
+  } finally {
+    setPaymentLoading(false);
+  }
+};
+
+
+  const handleSaveDeliveryFee = async () => {
+    if (!loja?.id) {
+      Alert.alert("Erro", "Loja não identificada.")
+      return
+    }
+
+    const taxaNum = Number.parseFloat(taxaEntrega.replace(",", "."))
+    if (isNaN(taxaNum) || taxaNum < 0) {
+      Alert.alert("Erro", "Por favor, insira um valor válido para a taxa de entrega.")
+      return
+    }
+
+    setSavingDeliveryFee(true)
+    try {
+      await api.put(`/lojas/${loja.id}/taxa-entrega`, { taxa_entrega: taxaNum })
+      Alert.alert("Sucesso", "Taxa de entrega salva com sucesso!")
+    } catch {
+      Alert.alert("Erro", "Não foi possível salvar a taxa de entrega.")
+    } finally {
+      setSavingDeliveryFee(false)
+    }
+  }
+
+  const formatTransferDate = (dateString: string | null) => {
+    if (!dateString) return "A definir"
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+    } catch {
+      return "A definir"
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Carregando dados financeiros...</Text>
+      </View>
+    )
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
+    >
+      <View style={styles.header}>
+        <Ionicons name="wallet-outline" size={60} color="#4CAF50" />
+        <Text style={styles.title}>Financeiro</Text>
+        <Text style={styles.subtitle}>Acompanhe seus ganhos e pagamentos</Text>
+      </View>
+
+      <View style={styles.balanceCard}>
+        <View style={styles.balanceHeader}>
+          <Ionicons name="trending-up" size={24} color="#4CAF50" />
+          <Text style={styles.balanceLabel}>Saldo Disponível</Text>
+        </View>
+        <Text style={styles.balanceValue}>R$ {(saldoDisponivel ?? 0).toFixed(2)}</Text>
+        <View style={styles.transferInfo}>
+          <Ionicons name="calendar-outline" size={16} color="#666" />
+          <Text style={styles.transferText}>Próxima transferência: {formatTransferDate(proximaTransferencia)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.divider} />
+
+      <View style={styles.sectionHeader}>
+        <Ionicons name="cash-outline" size={32} color="#E53935" />
+        <Text style={styles.sectionTitle}>Comissões da Plataforma</Text>
+      </View>
+      <Text style={styles.sectionSubtitle}>
+        Valor a ser pago à plataforma referente aos pedidos em Dinheiro e Pix (10% do valor total).
+      </Text>
+
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>Valor Pendente</Text>
+        <Text style={styles.cardValue}>R$ {(totalComissao ?? 0).toFixed(2)}</Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.payButton, totalComissao <= 0 && styles.payButtonDisabled]}
+        onPress={handlePayment}
+        disabled={totalComissao <= 0 || paymentLoading}
+      >
+        {paymentLoading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.payButtonText}>Efetuar Pagamento da Comissão</Text>
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.divider} />
+
+      <View style={styles.deliverySection}>
+        <Text style={styles.deliveryTitle}>Configurar Taxa de Entrega</Text>
+        <Text style={styles.deliverySubtitle}>Defina o valor que sua loja cobrará por entrega.</Text>
+
+        <Text style={styles.inputLabel}>Valor da Taxa (R$)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Ex: 5.00"
+          keyboardType="numeric"
+          value={taxaEntrega ?? ""}
+          onChangeText={setTaxaEntrega}
+        />
+
+        <TouchableOpacity style={styles.saveButton} onPress={handleSaveDeliveryFee} disabled={savingDeliveryFee}>
+          {savingDeliveryFee ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.saveButtonText}>Salvar Taxa de Entrega</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  )
+}
+
 const styles = StyleSheet.create({
-  fullScreenContainer: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-    alignItems: 'center',
-    paddingBottom: 50,
-  },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10, textAlign: 'center', color: '#343a40' },
-  subtitle: { fontSize: 16, color: '#6c757d', textAlign: 'center', marginBottom: 20 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 30,
-    alignItems: 'center',
-    width: '90%',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom: 20,
-  },
-  cardLabel: { fontSize: 18, color: '#6c757d' },
-  cardValue: { fontSize: 40, fontWeight: 'bold', color: '#dc3545', marginTop: 10 },
-  buttonContainer: { marginTop: 10, width: '90%', height: 50, justifyContent: 'center', marginBottom: 30 },
-  payButton: { backgroundColor: '#28a745', paddingVertical: 15, borderRadius: 8, width: '100%', alignItems: 'center' },
-  payButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  sectionDivider: {
-    width: '100%',
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 30,
-  },
-  inputGroup: {
-    width: '90%',
-    alignItems: 'flex-start',
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#343a40',
-    marginBottom: 8,
-  },
-  deliveryFeeInput: {
-    width: '100%',
-    height: 50,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    fontSize: 18,
-    color: '#343a40',
-    backgroundColor: '#fff',
-    marginBottom: 20,
-  },
-  saveButton: {
-    backgroundColor: '#007BFF',
-    paddingVertical: 15,
-    borderRadius: 8,
-    width: '100%',
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
+  container: { flex: 1, backgroundColor: "#f5f5f5" },
+  scrollContent: { padding: 20 },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f5f5f5" },
+  loadingText: { marginTop: 10, fontSize: 16, color: "#666" },
+  header: { alignItems: "center", marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: "bold", color: "#333", marginTop: 10 },
+  subtitle: { fontSize: 14, color: "#666", textAlign: "center", marginTop: 5 },
+  balanceCard: { backgroundColor: "#E8F5E9", borderRadius: 16, padding: 24, marginBottom: 20, borderWidth: 2, borderColor: "#4CAF50" },
+  balanceHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  balanceLabel: { fontSize: 16, color: "#2E7D32", fontWeight: "600", marginLeft: 8 },
+  balanceValue: { fontSize: 42, fontWeight: "bold", color: "#1B5E20", marginBottom: 12 },
+  transferInfo: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", padding: 12, borderRadius: 8 },
+  transferText: { fontSize: 14, color: "#666", marginLeft: 8, fontWeight: "500" },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  sectionTitle: { fontSize: 20, fontWeight: "bold", color: "#333", marginLeft: 10 },
+  sectionSubtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 20, paddingHorizontal: 10 },
+  card: { backgroundColor: "#fff", borderRadius: 12, padding: 20, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, marginBottom: 20 },
+  cardLabel: { fontSize: 16, color: "#666", marginBottom: 10 },
+  cardValue: { fontSize: 36, fontWeight: "bold", color: "#E53935" },
+  payButton: { backgroundColor: "#4CAF50", borderRadius: 8, padding: 16, alignItems: "center", marginBottom: 20 },
+  payButtonDisabled: { backgroundColor: "#ccc" },
+  payButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  divider: { height: 1, backgroundColor: "#ddd", marginVertical: 20 },
+  deliverySection: { backgroundColor: "#fff", borderRadius: 12, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  deliveryTitle: { fontSize: 20, fontWeight: "bold", color: "#333", marginBottom: 5 },
+  deliverySubtitle: { fontSize: 14, color: "#666", marginBottom: 20 },
+  inputLabel: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 8 },
+  input: { backgroundColor: "#f9f9f9", borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 20 },
+  saveButton: { backgroundColor: "#007AFF", borderRadius: 8, padding: 16, alignItems: "center" },
+  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+})

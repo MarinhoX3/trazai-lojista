@@ -74,20 +74,48 @@ export default function EditProductScreen() {
     // ====================================================================
     // CARREGAMENTO DOS DADOS (useEffect)
     // ====================================================================
+  // Dentro do useEffect:
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const response = await api.get(`/produtos/${id}`)
         const product = response.data
+
         setNome(product.nome)
         setDescricao(product.descricao)
+        
+        // ... (nome, descricao, preco, etc. inalterados)
         setPreco(product.preco)
-        setEstoque(product.estoque)
+        
+        // ==========================================================
+        // CORREÇÃO DE FORÇA PARA O ESTOQUE
+        // ==========================================================
+        let estoqueRecebido = String(product.estoque);
+        
+        // 1. Remove qualquer formatação de milhar que venha do backend:
+        // Ex: "20.000" -> "20000"
+        let valorPuro = estoqueRecebido.replace(/[^0-9]/g, "");
+
+        // 2. Se o valor é grande (ex: 20000) e você sabe que o estoque REAL é 20, 
+        // significa que o ponto foi introduzido como separador de milhar.
+        if (valorPuro.length > 3) {
+            // Assume-se que é formatação de milhar e pegamos os dígitos iniciais
+            // Ex: "20000" (se for o caso) ou "20" (se o backend já tiver formatado)
+            
+            // Vamos apenas pegar os dígitos ANTES do ponto, se houver:
+            const partes = estoqueRecebido.split('.');
+            valorPuro = partes[0] || valorPuro; 
+        }
+
+        // 3. Força a ser um número inteiro, garantindo que não há zeros à esquerda desnecessários
+        const estoqueFinal = String(parseInt(valorPuro, 10) || 0);
+        setEstoque(estoqueFinal) // <--- Agora deve ser "20"
+        // ==========================================================
+        
         setUnidade(product.unidade_de_venda || "UN")
         setCategoria(product.categoria)
-        if (product.url_foto) {
-          setImagemExistente(`${ASSET_BASE_URL}/${product.url_foto}`)
-        }
+        // ... (restante do código)
       } catch (error) {
         console.error("Error fetching product details:", error)
       }
@@ -95,6 +123,9 @@ export default function EditProductScreen() {
 
     fetchProduct()
   }, [id])
+
+ 
+  
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -229,14 +260,14 @@ export default function EditProductScreen() {
 
           <Text style={styles.label}>Estoque</Text>
           <TextInput
-            style={styles.input}
-            value={estoque}
-            // CORREÇÃO 2: Limpeza do valor do Estoque na digitação
-            onChangeText={(text) => setEstoque(cleanNumberString(text))}
-            keyboardType="numeric"
-            placeholder="Quantidade em estoque"
-            placeholderTextColor="#888"
-          />
+    style={styles.input}
+    value={estoque} // <-- Volta a usar apenas o estado 'estoque'
+    // CORREÇÃO: Usamos o `cleanNumberString` no onChangeText
+    onChangeText={(text) => setEstoque(cleanNumberString(text))} 
+    keyboardType="numeric"
+    placeholder="Quantidade em estoque"
+    placeholderTextColor="#888"
+/>
 
           <Text style={styles.label}>Unidade de Venda</Text>
           <TextInput
