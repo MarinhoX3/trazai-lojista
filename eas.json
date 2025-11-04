@@ -2,7 +2,6 @@
   "cli": {
     "appVersionSource": "local"
   },
-  "node": "18.18.0",
   "build": {
     "development": {
       "developmentClient": true,
@@ -28,9 +27,6 @@
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
-      },
-      "ios": {
-        "simulator": false
       }
     }
   },
