@@ -1,9 +1,11 @@
 {
   "cli": {
-    "appVersionSource": "local"
+    "appVersionSource": "local",
+    "version": ">= 3.0.0"
   },
   "build": {
     "development": {
+      "projectRoot": "app-lojista",
       "developmentClient": true,
       "distribution": "internal",
       "environment": "development",
@@ -15,6 +17,7 @@
       }
     },
     "preview": {
+      "projectRoot": "app-lojista",
       "distribution": "internal",
       "environment": "preview",
       "android": {
@@ -22,6 +25,7 @@
       }
     },
     "production": {
+      "projectRoot": "app-lojista",
       "distribution": "store",
       "environment": "production",
       "autoIncrement": true,
