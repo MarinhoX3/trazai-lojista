@@ -18,7 +18,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.adriano_marinho.trazailojista",
-      "versionCode": 6
+      "versionCode": 9
     },
     "web": {
       "bundler": "metro",
@@ -26,8 +26,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-    "expo-router"   
-  ],
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true
     },
