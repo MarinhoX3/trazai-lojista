@@ -1,4 +1,4 @@
-package com.trazailoja
+package com.adriano_marinho.trazailojista
 
 import android.os.Build
 import android.os.Bundle
