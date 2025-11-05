@@ -1,29 +1,36 @@
-"use client"
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Linking } from "react-native"
-import { Stack, useRouter } from "expo-router"
-import { Ionicons } from "@expo/vector-icons"
+"use client";
+import { 
+  View, Text, ScrollView, StyleSheet, SafeAreaView,
+  TouchableOpacity, Alert 
+} from "react-native";
+import { Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as Linking from "expo-linking";
 
 export default function AjudaScreen() {
-  const router = useRouter()
 
-  const handleContactSupport = () => {
-    const whatsappNumber = "5585996574629"
-    const message = "Olá, preciso de ajuda com o app TRAZAÍ"
-    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
+  const handleContactSupport = async () => {
+    const phone = "5585996574629";
+    const message = "Olá! Preciso de ajuda com o app TRAZAÍ.";
 
-    Linking.canOpenURL(url)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(url)
-        } else {
-          alert("Não foi possível abrir o WhatsApp. Por favor, entre em contato pelo número: (85) 99657-4629")
-        }
-      })
-      .catch((err) => {
-        console.error("Erro ao abrir WhatsApp:", err)
-        alert("Erro ao abrir WhatsApp. Número para contato: (85) 99657-4629")
-      })
-  }
+    const appUrl = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
+    const webUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+
+    try {
+      const supported = await Linking.canOpenURL(appUrl);
+
+      if (supported) {
+        await Linking.openURL(appUrl);
+      } else {
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      Alert.alert(
+        "Erro",
+        "Não foi possível abrir o WhatsApp. Número para contato: (85) 99657-4629"
+      );
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -300,7 +307,10 @@ export default function AjudaScreen() {
             <Ionicons name="headset" size={24} color="#DC2626" />
             <Text style={styles.sectionTitle}>Precisa de Ajuda?</Text>
           </View>
-          <Text style={styles.sectionText}>Nossa equipe está pronta para ajudar! Entre em contato:</Text>
+          <Text style={styles.sectionText}>
+            Nossa equipe está pronta para ajudar!
+          </Text>
+
           <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
             <Ionicons name="logo-whatsapp" size={20} color="#fff" />
             <Text style={styles.supportButtonText}>Falar com Suporte</Text>
@@ -308,7 +318,7 @@ export default function AjudaScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
