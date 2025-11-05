@@ -20,24 +20,20 @@ export default ({ config }) => ({
       "expo-notifications",
       {
         icon: "./assets/images/notification-icon.png",
-        color: "#DC2626", // cor do ícone Android
-        sounds: [
-          "./assets/notification-sound.wav"
-        ]
+        color: "#DC2626"
       }
-    ],
-    "@react-native-firebase/app",
+    ]
   ],
 
   android: {
     ...config.android,
     package: "com.adriano_marinho.trazailojista",
-    googleServicesFile: "./android/app/google-services.json",
+    googleServicesFile: "./google-services.json", // ✅ Caminho correto
+    useNextNotificationsApi: true,
     permissions: [
       "android.permission.RECEIVE_BOOT_COMPLETED",
       "android.permission.VIBRATE",
       "android.permission.POST_NOTIFICATIONS"
     ],
-    useNextNotificationsApi: true
   },
 });
