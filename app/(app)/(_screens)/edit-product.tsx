@@ -279,17 +279,24 @@ export default function EditProductScreen() {
           />
 
           <Text style={styles.label}>Categoria do Produto</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={categoria}
-              onValueChange={(itemValue) => setCategoria(itemValue as string)}
-              style={styles.picker}
-            >
-              {productCategoriesForForms.map((cat) => (
-                <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
-              ))}
-            </Picker>
-          </View>
+<View style={styles.pickerContainer}>
+  <Picker
+    selectedValue={categoria}
+    onValueChange={(itemValue) => setCategoria(itemValue as string)}
+    style={styles.picker}
+    dropdownIconColor="#000" // ✅ Ajuste do ícone no Android
+  >
+    {productCategoriesForForms.map((cat) => (
+      <Picker.Item 
+        key={cat.id}
+        label={cat.name}
+        value={cat.id}
+        color="#000" // ✅ Força o texto da opção em preto
+      />
+    ))}
+  </Picker>
+</View>
+
 
           <View style={styles.buttonContainer}>
             {isSaving ? (

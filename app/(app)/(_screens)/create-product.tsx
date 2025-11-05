@@ -173,21 +173,27 @@ export default function CreateProductScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Categoria <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={categoria}
-                  onValueChange={(itemValue) => setCategoria(itemValue as string)}
-                  style={styles.picker}
-                >
-                  {productCategoriesForForms.map((cat) => (
-                    <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
+  <Text style={styles.label}>
+    Categoria <Text style={styles.required}>*</Text>
+  </Text>
+  <View style={styles.pickerContainer}>
+    <Picker
+      selectedValue={categoria}
+      onValueChange={(itemValue) => setCategoria(itemValue as string)}
+      style={styles.picker}
+      dropdownIconColor="#000"
+    >
+      {productCategoriesForForms.map((cat) => (
+        <Picker.Item 
+          key={cat.id} 
+          label={cat.name} 
+          value={cat.id} 
+          color="#000" 
+        />
+      ))}
+    </Picker>
+  </View>
+</View>
           </View>
 
           <View style={styles.section}>
@@ -225,21 +231,28 @@ export default function CreateProductScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Unidade de Venda <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={unidade}
-                  onValueChange={(itemValue) => setUnidade(itemValue as string)}
-                  style={styles.picker}
-                >
-                  {unidadeOptions.map((option) => (
-                    <Picker.Item key={option.value} label={option.label} value={option.value} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
+  <Text style={styles.label}>
+    Unidade de Venda <Text style={styles.required}>*</Text>
+  </Text>
+  <View style={styles.pickerContainer}>
+    <Picker
+      selectedValue={unidade}
+      onValueChange={(itemValue) => setUnidade(itemValue as string)}
+      style={styles.picker}
+      dropdownIconColor="#000"
+    >
+      {unidadeOptions.map((option) => (
+        <Picker.Item 
+          key={option.value} 
+          label={option.label} 
+          value={option.value}
+          color="#000" 
+        />
+      ))}
+    </Picker>
+  </View>
+</View>
+
           </View>
 
           <View style={styles.buttonContainer}>
@@ -412,9 +425,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   picker: {
-    height: 50,
-    width: "100%",
-  },
+  height: 50,
+  width: "100%",
+  color: "#000", // ✅ importantíssimo
+},
 
   buttonContainer: {
     marginTop: 8,
