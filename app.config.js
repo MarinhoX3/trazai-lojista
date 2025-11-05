@@ -4,7 +4,7 @@ import 'dotenv/config';
 export default ({ config }) => ({
   ...config,
   name: "TrazAi Loja",
-  slug: "trazai-loja",
+  slug: "traz-ai-lojista", // ✅ corrigido
 
   extra: {
     apiBaseUrl: process.env.API_BASE_URL,
@@ -28,7 +28,7 @@ export default ({ config }) => ({
   android: {
     ...config.android,
     package: "com.adriano_marinho.trazailojista",
-    googleServicesFile: "./google-services.json", // ✅ Caminho correto
+    googleServicesFile: "./google-services.json",
     useNextNotificationsApi: true,
     permissions: [
       "android.permission.RECEIVE_BOOT_COMPLETED",
