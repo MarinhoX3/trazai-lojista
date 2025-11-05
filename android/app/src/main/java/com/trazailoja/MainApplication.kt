@@ -1,4 +1,4 @@
-package com.adriano_marinho.trazailojista
+package com.trazailoja
 
 import android.app.Application
 import android.content.res.Configuration
