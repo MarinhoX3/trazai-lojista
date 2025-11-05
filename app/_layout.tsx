@@ -39,13 +39,14 @@ function RootLayoutNav() {
     );
   }
 
-  if (!loja) {
-    return (
-      <Stack>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      </Stack>
-    );
-  }
+if (!loja) {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)" />
+    </Stack>
+  );
+}
+
 
   return (
     <Stack>
