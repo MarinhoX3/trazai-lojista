@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { Stack, SplashScreen, useSegments } from 'expo-router';
+import { Stack, Slot, SplashScreen } from 'expo-router';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { AuthLojaProvider, useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 import { PedidosAtivosProvider } from '../src/api/contexts/PedidosAtivosContext';
-import { View, ActivityIndicator, Text } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 
 // Previna que a tela de splash se esconda automaticamente
@@ -22,7 +22,6 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const { loja, loading } = useAuthLoja();
-  const segments = useSegments();
 
   useEffect(() => {
     if (!loading) {
@@ -30,6 +29,7 @@ function RootLayoutNav() {
     }
   }, [loading]);
 
+  // Enquanto os dados da loja estão carregando
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
@@ -39,18 +39,15 @@ function RootLayoutNav() {
     );
   }
 
-if (!loja) {
+  // 🔹 Quando o usuário NÃO está logado → renderiza as rotas do grupo (auth)
+  if (!loja) {
+    return <Slot />;
+  }
+
+  // 🔹 Quando o usuário ESTÁ logado → renderiza o grupo (app)
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" />
-    </Stack>
-  );
-}
-
-
-  return (
-    <Stack>
-      <Stack.Screen name="(app)" options={{ headerShown: false }} />
+      <Stack.Screen name="(app)" />
     </Stack>
   );
 }
