@@ -1,5 +1,4 @@
-"use client"
-
+import React, { useState, useCallback, useMemo } from "react"
 import {
   View,
   Text,
@@ -14,7 +13,6 @@ import {
   TouchableOpacity,
 } from "react-native"
 import { useFocusEffect, useRouter } from "expo-router"
-import { useState, useCallback, useMemo } from "react"
 import api, { ASSET_BASE_URL } from "../../../src/api/api"
 import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -41,6 +39,9 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
   const [termoBusca, setTermoBusca] = useState("")
   const [contagemPedidos, setContagemPedidos] = useState(0)
+  const [raioEntrega, setRaioEntrega] = useState<number>(loja?.raio_entrega_km ?? 3);
+  const [salvandoRaio, setSalvandoRaio] = useState(false)
+  const [mensagemSalva, setMensagemSalva] = useState("")
 
   const fetchProdutos = useCallback(async () => {
     if (!loja?.id) return
@@ -77,6 +78,21 @@ export default function DashboardScreen() {
     [produtos, termoBusca],
   )
 
+  // 🔧 Atualiza e mostra mensagem de status
+  const salvarRaioEntrega = async (novoRaio: number) => {
+    if (!loja?.id) return
+    setSalvandoRaio(true)
+    try {
+      await api.put(`/lojas/${loja.id}`, { raio_entrega_km: novoRaio })
+      setMensagemSalva("Raio salvo!")
+      setTimeout(() => setMensagemSalva(""), 2000)
+    } catch (error) {
+      setMensagemSalva("Erro ao salvar!")
+    } finally {
+      setSalvandoRaio(false)
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -102,7 +118,6 @@ export default function DashboardScreen() {
         <Image
           source={{ uri: imageUrl }}
           style={styles.produtoCardImagem}
-          onError={(e) => console.log(`Erro ao carregar a imagem ${item.nome}:`, e.nativeEvent.error)}
         />
         <View style={styles.produtoCardInfo}>
           <Text style={styles.produtoCardNome} numberOfLines={1}>
@@ -119,6 +134,39 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.dashboardHeader}>
+        <Text style={styles.dashboardTitle}>Painel da Loja</Text>
+        <Text style={styles.dashboardSubtitle}>Pedidos ativos: {contagemPedidos}</Text>
+      </View>
+
+      {/* 🧭 Raio de Entrega */}
+      <View style={styles.raioContainer}>
+        <Text style={styles.raioLabel}>Raio de Entrega (km):</Text>
+        <TextInput
+          style={styles.raioInput}
+          keyboardType="numeric"
+          value={raioEntrega.toString()}
+          onChangeText={(value) => setRaioEntrega(parseFloat(value) || 0)}
+          onBlur={() => salvarRaioEntrega(raioEntrega)}
+          editable={!salvandoRaio}
+        />
+        {salvandoRaio && <ActivityIndicator size="small" color="#FF0000" />}
+      </View>
+
+      {/* Mensagem visual de status */}
+      {mensagemSalva ? (
+        <Text
+          style={{
+            color: mensagemSalva.includes("Erro") ? "red" : "#008000",
+            fontSize: 13,
+            textAlign: "center",
+            marginBottom: 5,
+          }}
+        >
+          {mensagemSalva}
+        </Text>
+      ) : null}
+
       <View style={styles.topControls}>
         <TextInput
           style={styles.barraBusca}
@@ -154,28 +202,31 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F7F7F7",
-  },
-  loadingContainer: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: "#F7F7F7" },
+  dashboardHeader: { alignItems: "center", marginTop: 10 },
+  dashboardTitle: { fontSize: 22, fontWeight: "bold", color: "#FF0000" },
+  dashboardSubtitle: { fontSize: 15, color: "#555", marginTop: 4 },
+  raioContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F7F7F7",
+    marginVertical: 10,
   },
-  loadingText: {
-    marginTop: 10,
+  raioLabel: { fontSize: 16, color: "#333", marginRight: 10 },
+  raioInput: {
+    backgroundColor: "#FFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DDD",
+    width: 70,
+    textAlign: "center",
     fontSize: 16,
-    color: "#333",
+    color: "#000",
+    padding: 5,
   },
-  topControls: {
-    paddingHorizontal: ITEM_MARGIN,
-    marginBottom: 20,
-    width: "100%",
-    alignItems: "center",
-    marginTop: 16, // Changed from -20 to 16 to add proper spacing below status bar
-  },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 10, fontSize: 16, color: "#333" },
+  topControls: { paddingHorizontal: ITEM_MARGIN, marginBottom: 20, width: "100%", alignItems: "center" },
   barraBusca: {
     height: 50,
     backgroundColor: "#fff",
@@ -184,39 +235,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     fontSize: 16,
     color: "#333",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 3,
     marginBottom: 10,
   },
   botaoAdicionar: {
     backgroundColor: "#FF0000",
     paddingVertical: 15,
-    paddingHorizontal: 30,
     borderRadius: 25,
     width: "100%",
     alignItems: "center",
-    shadowColor: "#FF0000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
     elevation: 5,
   },
-  botaoTexto: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "bold",
-  },
-  listaContentContainer: {
-    paddingBottom: 100,
-    paddingHorizontal: ITEM_MARGIN,
-  },
-  row: {
-    justifyContent: "space-between",
-    marginBottom: ITEM_MARGIN,
-  },
+  botaoTexto: { color: "#fff", fontSize: 17, fontWeight: "bold" },
+  listaContentContainer: { paddingBottom: 100, paddingHorizontal: ITEM_MARGIN },
+  row: { justifyContent: "space-between", marginBottom: ITEM_MARGIN },
   produtoCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -230,46 +262,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
   },
-  produtoCardImagem: {
-    width: "100%",
-    height: ITEM_WIDTH * 0.75,
-    resizeMode: "cover",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  produtoCardInfo: {
-    padding: 10,
-  },
-  produtoCardNome: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
-  },
-  precoEstoqueContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 5,
-  },
-  produtoCardPreco: {
-    fontSize: 14, // REDUZIDO: de 15 para 14
-    color: "#FF0000",
-    fontWeight: "600",
-  },
-  produtoCardEstoque: {
-    fontSize: 12, // REDUZIDO: de 13 para 12
-    fontWeight: "bold",
-  },
-  emptyListContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 50,
-  },
-  emptyListText: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-  },
+  produtoCardImagem: { width: "100%", height: ITEM_WIDTH * 0.75, resizeMode: "cover" },
+  produtoCardInfo: { padding: 10 },
+  produtoCardNome: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 5 },
+  precoEstoqueContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  produtoCardPreco: { fontSize: 14, color: "#FF0000", fontWeight: "600" },
+  produtoCardEstoque: { fontSize: 12, fontWeight: "bold" },
+  emptyListText: { fontSize: 16, color: "#666", textAlign: "center" },
 })

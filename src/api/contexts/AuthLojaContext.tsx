@@ -8,8 +8,15 @@ export interface AuthLoja {
   id: number;
   nome_loja: string;
   email_login: string;
+  endereco_loja?: string;
+  telefone_contato?: string;
+  categoria?: string;
   taxa_entrega?: number;
+  url_logo?: string | null;
+  push_token?: string | null;
+  raio_entrega_km?: number; // ✅ novo campo adicionado
 }
+
 
 // Define o que o contexto vai fornecer
 interface AuthLojaContextData {

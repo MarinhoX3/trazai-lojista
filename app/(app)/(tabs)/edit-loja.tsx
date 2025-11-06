@@ -107,30 +107,49 @@ export default function EditLojaScreen() {
   }
 
   const handleConnectStripe = async () => {
-    if (!loja || !token) {
-      Alert.alert("Erro", "Não foi possível identificar os dados de autenticação da sua loja.")
-      return
-    }
-    setStripeLoading(true)
-    try {
-      const response = await api.post("/lojas/criar-link-stripe", { id_loja: loja.id })
-
-      const { url } = response.data
-      const supported = await Linking.canOpenURL(url)
-
-      if (supported) {
-        await Linking.openURL(url)
-      } else {
-        Alert.alert("Erro", `Não foi possível abrir o link: ${url}`)
-      }
-    } catch (error: any) {
-      console.error("Erro ao iniciar cadastro Stripe:", error)
-      const mensagem = error.response?.data?.message || "Ocorreu um erro. Tente novamente."
-      Alert.alert("Erro", mensagem)
-    } finally {
-      setStripeLoading(false)
-    }
+  if (!loja || !token) {
+    Alert.alert("Erro", "Não foi possível identificar a loja autenticada.");
+    return;
   }
+
+  setStripeLoading(true);
+
+  try {
+    console.log("🚀 Criando link Stripe para loja:", loja.id);
+
+    const response = await api.post(
+      "/lojas/criar-link-stripe",
+      { id_loja: loja.id },
+      { headers: { Authorization: `Bearer ${token}` } } // ✅ Inclui o token JWT
+    );
+
+    if (!response.data?.url) {
+      throw new Error("Resposta inválida do servidor — nenhum link retornado.");
+    }
+
+    const { url } = response.data;
+
+    console.log("🔗 Link de onboarding Stripe recebido:", url);
+
+    // Verifica se o link é abrível no dispositivo
+    const supported = await Linking.canOpenURL(url);
+
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert("Erro", `Não foi possível abrir o link: ${url}`);
+    }
+  } catch (error: any) {
+    console.error("❌ Erro ao iniciar cadastro Stripe:", error);
+    const mensagem =
+      error.response?.data?.message ||
+      error.message ||
+      "Ocorreu um erro inesperado. Tente novamente mais tarde.";
+    Alert.alert("Erro", mensagem);
+  } finally {
+    setStripeLoading(false);
+  }
+};
 
   const handleNavigateToHelp = () => {
     router.push("/ajuda" as any)
