@@ -2,8 +2,8 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import api from "../api";
+import { useRouter, useSegments, useRootNavigationState } from "expo-router";
 
-// 🏪 Tipo principal da loja logada
 export interface AuthLoja {
   id: number;
   nome_loja: string;
@@ -14,10 +14,9 @@ export interface AuthLoja {
   taxa_entrega?: number;
   url_logo?: string | null;
   push_token?: string | null;
-  raio_entrega_km?: number; // ✅ campo novo
+  raio_entrega_km?: number;
 }
 
-// 🧭 O que o contexto fornece
 interface AuthLojaContextData {
   loja: AuthLoja | null;
   token: string | null;
@@ -34,10 +33,12 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔔 Inicializa push notifications se a loja estiver logada
+  const router = useRouter();
+  const segments = useSegments();
+  const navigationState = useRootNavigationState();
+
   usePushNotifications(loja?.id);
 
-  // 🔹 Carrega dados do AsyncStorage quando o app inicia
   useEffect(() => {
     const loadStorageData = async () => {
       try {
@@ -59,7 +60,20 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     loadStorageData();
   }, []);
 
-  // 🔑 Login e persistência
+  // 🔹 Redirecionamento automático
+  useEffect(() => {
+    if (!navigationState?.key || loading) return;
+
+    const inAuthGroup =
+      segments[0] === "login" || segments[0] === "register-loja";
+
+    if (!loja && !inAuthGroup) {
+      router.replace("/login");
+    } else if (loja && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [loja, segments, navigationState?.key, loading]);
+
   const login = async (lojaData: AuthLoja, authToken: string) => {
     setLoja(lojaData);
     setToken(authToken);
@@ -69,17 +83,15 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.setItem("@AppLojista:token", authToken);
   };
 
-  // 🚪 Logout total
   const logout = async () => {
     setLoja(null);
     setToken(null);
     delete api.defaults.headers.common["Authorization"];
-
     await AsyncStorage.removeItem("@AppLojista:loja");
     await AsyncStorage.removeItem("@AppLojista:token");
+    router.replace("/login");
   };
 
-  // 🔄 Atualiza parcialmente os dados da loja
   const updateAuthLoja = async (
     updatedData: Partial<AuthLoja>
   ): Promise<AuthLoja | null> => {
@@ -108,7 +120,6 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// 🔗 Hook para consumir o contexto
 export const useAuthLoja = (): AuthLojaContextData => {
   const context = useContext(AuthLojaContext);
   if (!context)
