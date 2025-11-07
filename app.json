@@ -8,9 +8,11 @@
     "scheme": "applojista",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "ios": {
       "supportsTablet": true
     },
+
     "android": {
       "package": "com.adriano_marinho.trazailojista",
       "versionCode": 11,
@@ -23,39 +25,34 @@
         {
           "action": "VIEW",
           "data": [
-            {
-              "scheme": "whatsapp"
-            },
-            {
-              "scheme": "https",
-              "host": "wa.me"
-            }
+            { "scheme": "whatsapp" },
+            { "scheme": "https", "host": "wa.me" }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         },
         {
           "action": "VIEW",
-          "data": [
-            {
-              "scheme": "applojista"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "data": [{ "scheme": "applojista" }],
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
+
+    "notification": {
+      "icon": "./assets/images/notification-icon.png",
+      "color": "#0B7709",
+      "androidMode": "default",
+      "androidCollapsedTitle": "TrazAí Loja"
+    },
+
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
+
     "plugins": [
       "expo-router"
     ],
+
     "extra": {
       "router": {},
       "eas": {

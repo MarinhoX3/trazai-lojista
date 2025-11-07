@@ -17,12 +17,13 @@ export default ({ config }) => ({
   plugins: [
     ...(config.plugins || []),
     [
-      "expo-notifications",
-      {
-        icon: "./assets/images/notification-icon.png",
-        color: "#DC2626"
-      }
-    ]
+  "expo-notifications",
+  {
+    icon: "./assets/images/notification-icon.png",
+    color: "#0B7709",
+    androidCollapsedTitle: "TrazAí Loja"
+  }
+]
   ],
 
   android: {
