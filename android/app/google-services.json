@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "192505377055",
-    "project_id": "trazai-loja",
-    "storage_bucket": "trazai-loja.firebasestorage.app"
+    "project_number": "284836982132",
+    "project_id": "trazai-app",
+    "storage_bucket": "trazai-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:192505377055:android:802a954ac8d1aafade002a",
+        "mobilesdk_app_id": "1:284836982132:android:ebd0a9512a4843189e9021",
         "android_client_info": {
           "package_name": "com.adriano_marinho.trazailojista"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCuyeNtM9qnpM3DjYfCicPAI03d5HZZ_gQ"
+          "current_key": "AIzaSyC-Y-2dJUDPgU98vTdd95qfhpILs5FWuU8"
         }
       ],
       "services": {

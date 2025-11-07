@@ -1,10 +1,9 @@
-// app.config.js
 import 'dotenv/config';
 
 export default ({ config }) => ({
   ...config,
   name: "TrazAi Loja",
-  slug: "traz-ai-lojista", // ✅ corrigido
+  slug: "traz-ai-lojista",
 
   extra: {
     apiBaseUrl: process.env.API_BASE_URL,
@@ -14,16 +13,23 @@ export default ({ config }) => ({
     }
   },
 
+  notification: {
+    icon: "./assets/images/notification-icon.png", // 👈 força o uso do ícone branco
+    color: "#0B7709",
+    androidMode: "default",
+    androidCollapsedTitle: "TrazAí Loja"
+  },
+
   plugins: [
     ...(config.plugins || []),
     [
-  "expo-notifications",
-  {
-    icon: "./assets/images/notification-icon.png",
-    color: "#0B7709",
-    androidCollapsedTitle: "TrazAí Loja"
-  }
-]
+      "expo-notifications",
+      {
+        icon: "./assets/images/notification-icon.png",
+        color: "#0B7709",
+        androidCollapsedTitle: "TrazAí Loja"
+      }
+    ]
   ],
 
   android: {
