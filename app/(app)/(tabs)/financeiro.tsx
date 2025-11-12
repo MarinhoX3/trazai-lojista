@@ -1,4 +1,4 @@
-"use client"
+// JavaScript Document"use client"
 
 import { useState, useCallback, useRef } from "react"
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from "react-native"
@@ -11,13 +11,17 @@ import { useStripe, StripeProvider } from '@stripe/stripe-react-native'
 import { MotiView } from "moti";
 
 
-export default function App() {
+function App() {
   return (
     <StripeProvider publishableKey="pk_live_51RhcOpDK4gB80CI0e18vr6pZQDfX3jKom5lbMWEWJnxunMh4LqU6JZk7qH4pI8lONxtmVZfzWQaKAvfXwkR0fpZb00m8CtjxcG">
       <Financeiro />
     </StripeProvider>
   );
 }
+
+// 👇 expo-router precisa que o export default seja o componente da tela
+export default App;
+
 
 function Financeiro() {
   const { loja } = useAuthLoja()
@@ -171,6 +175,8 @@ const fetchDadosFinanceiros = useCallback(async () => {
       </View>
     )
   }
+
+  
 
   return (
   <ScrollView
