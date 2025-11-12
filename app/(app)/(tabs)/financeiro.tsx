@@ -8,6 +8,8 @@ import api from "../../../src/api/api"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useStripe, StripeProvider } from '@stripe/stripe-react-native'
+import { MotiView } from "moti";
+
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ function Financeiro() {
   const [loading, setLoading] = useState(true)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [savingDeliveryFee, setSavingDeliveryFee] = useState(false)
+  const [repassesFuturos, setRepassesFuturos] = useState<any[]>([]);
+
 
   const fetchedLojaIdRef = useRef<number | null>(null)
   const insets = useSafeAreaInsets()
@@ -39,26 +43,27 @@ const fetchDadosFinanceiros = useCallback(async () => {
   setLoading(true);
 
   try {
-    // ✅ Sando disponível e próxima transferência
-    const saldoResponse = await api.get(`/payments/saldo-disponivel/${loja.id}`);
-    setSaldoDisponivel(Number(saldoResponse.data.saldo) || 0);
-    setProximaTransferencia(saldoResponse.data.proximaTransferencia || null);
+  // ✅ Novo endpoint financeiro
+  const saldoResponse = await api.get(`/financeiro/saldo/${loja.id}`);
+  setSaldoDisponivel(Number(saldoResponse.data.saldo_disponivel) || 0);
+  setProximaTransferencia(saldoResponse.data.proximaTransferencia || null);
+  setRepassesFuturos(saldoResponse.data.repasses_futuros || []);
 
-    // ✅ Comissões pendentes (cálculo real do banco)
-    const comissoesResponse = await api.get(`/payments/comissoes-pendentes/${loja.id}`);
-    const { valorPendente, comissaoId } = comissoesResponse.data;
+  // ✅ Comissões pendentes (cálculo real do banco)
+  const comissoesResponse = await api.get(`/payments/comissoes-pendentes/${loja.id}`);
+  const { valorPendente, comissaoId } = comissoesResponse.data;
 
-    setTotalComissao(Number(valorPendente) || 0);
-    setComissaoId(comissaoId ?? null);
+  setTotalComissao(Number(valorPendente) || 0);
+  setComissaoId(comissaoId ?? null);
 
-    // ✅ Taxa de entrega
-    const lojaResponse = await api.get(`/lojas/${loja.id}`);
-    setTaxaEntrega(String(Number(lojaResponse.data.taxa_entrega || 0).toFixed(2)));
+  // ✅ Taxa de entrega
+  const lojaResponse = await api.get(`/lojas/${loja.id}`);
+  setTaxaEntrega(String(Number(lojaResponse.data.taxa_entrega || 0).toFixed(2)));
 
-  } catch (err) {
-    console.log("Erro ao carregar financeiro:", err);
-    Alert.alert("Erro", "Não foi possível carregar os dados financeiros.");
-  }
+} catch (err) {
+  console.log("Erro ao carregar financeiro:", err);
+  Alert.alert("Erro", "Não foi possível carregar os dados financeiros.");
+}
 
   setLoading(false);
 }, [loja?.id]);
@@ -125,7 +130,6 @@ const fetchDadosFinanceiros = useCallback(async () => {
   }
 };
 
-
   const handleSaveDeliveryFee = async () => {
     if (!loja?.id) {
       Alert.alert("Erro", "Loja não identificada.")
@@ -169,80 +173,124 @@ const fetchDadosFinanceiros = useCallback(async () => {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
-    >
-      <View style={styles.header}>
-        <Ionicons name="wallet-outline" size={60} color="#4CAF50" />
-        <Text style={styles.title}>Financeiro</Text>
-        <Text style={styles.subtitle}>Acompanhe seus ganhos e pagamentos</Text>
-      </View>
+  <ScrollView
+    style={styles.container}
+    contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+  >
+    {/* Cabeçalho */}
+    <View style={styles.header}>
+      <Ionicons name="wallet-outline" size={60} color="#0B7709" />
+      <Text style={styles.title}>Financeiro</Text>
+      <Text style={styles.subtitle}>Acompanhe seus ganhos e pagamentos</Text>
+    </View>
 
-      <View style={styles.balanceCard}>
-        <View style={styles.balanceHeader}>
-          <Ionicons name="trending-up" size={24} color="#4CAF50" />
-          <Text style={styles.balanceLabel}>Saldo Disponível</Text>
+    {/* Card do saldo */}
+<MotiView
+  from={{ opacity: 0, translateY: 20 }}
+  animate={{ opacity: 1, translateY: 0 }}
+  transition={{ delay: 100, damping: 12 }}
+  style={styles.cardPrimary}
+>
+  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+    <Ionicons name="cash-outline" size={22} color="#0B7709" />
+    <Text style={styles.cardTitle}>Saldo disponível</Text>
+  </View>
+  <Text style={styles.saldoValor}>R$ {saldoDisponivel.toFixed(2)}</Text>
+  <View style={styles.transferenciaBox}>
+    <Ionicons name="calendar-outline" size={16} color="#666" />
+    <Text style={styles.transferenciaTexto}>
+      Próxima transferência: {formatTransferDate(proximaTransferencia)}
+    </Text>
+  </View>
+</MotiView>
+
+{/* Repasses futuros */}
+<MotiView
+  from={{ opacity: 0, translateY: 20 }}
+  animate={{ opacity: 1, translateY: 0 }}
+  transition={{ delay: 250, damping: 12 }}
+  style={styles.card}
+>
+  <Text style={styles.sectionTitle}>💸 Repasses futuros</Text>
+  {Array.isArray(repassesFuturos) && repassesFuturos.length > 0 ? (
+    repassesFuturos.map((repasse, index) => (
+      <View key={index} style={styles.repasseItem}>
+        <View>
+          <Text style={styles.repasseData}>
+            {new Date(repasse.data).toLocaleDateString("pt-BR", {
+              day: "numeric",
+              month: "short",
+            })}
+          </Text>
+          <Text style={styles.repasseLegenda}>Programado</Text>
         </View>
-        <Text style={styles.balanceValue}>R$ {(saldoDisponivel ?? 0).toFixed(2)}</Text>
-        <View style={styles.transferInfo}>
-          <Ionicons name="calendar-outline" size={16} color="#666" />
-          <Text style={styles.transferText}>Próxima transferência: {formatTransferDate(proximaTransferencia)}</Text>
-        </View>
+        <Text style={styles.repasseValor}>R$ {parseFloat(repasse.valor).toFixed(2)}</Text>
       </View>
+    ))
+  ) : (
+    <Text style={styles.textMuted}>Nenhum repasse futuro no momento.</Text>
+  )}
+</MotiView>
 
-      <View style={styles.divider} />
+{/* Comissões da plataforma */}
+<MotiView
+  from={{ opacity: 0, translateY: 20 }}
+  animate={{ opacity: 1, translateY: 0 }}
+  transition={{ delay: 400, damping: 12 }}
+  style={styles.card}
+>
+  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+    <Ionicons name="trending-down-outline" size={22} color="#E53935" />
+    <Text style={[styles.cardTitle, { color: "#E53935" }]}>Comissões pendentes</Text>
+  </View>
+  <Text style={styles.valorComissao}>R$ {totalComissao.toFixed(2)}</Text>
+  <Text style={styles.cardDescricao}>
+    Valor a ser pago à plataforma referente aos pedidos em dinheiro e Pix (10%).
+  </Text>
 
-      <View style={styles.sectionHeader}>
-        <Ionicons name="cash-outline" size={32} color="#E53935" />
-        <Text style={styles.sectionTitle}>Comissões da Plataforma</Text>
-      </View>
-      <Text style={styles.sectionSubtitle}>
-        Valor a ser pago à plataforma referente aos pedidos em Dinheiro e Pix (10% do valor total).
-      </Text>
+  <TouchableOpacity
+    style={[styles.botaoPagamento, totalComissao <= 0 && styles.botaoDesativado]}
+    onPress={handlePayment}
+    disabled={totalComissao <= 0 || paymentLoading}
+  >
+    {paymentLoading ? (
+      <ActivityIndicator size="small" color="#fff" />
+    ) : (
+      <Text style={styles.botaoTexto}>Efetuar pagamento</Text>
+    )}
+  </TouchableOpacity>
+</MotiView>
 
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>Valor Pendente</Text>
-        <Text style={styles.cardValue}>R$ {(totalComissao ?? 0).toFixed(2)}</Text>
-      </View>
+{/* Taxa de entrega */}
+<MotiView
+  from={{ opacity: 0, translateY: 20 }}
+  animate={{ opacity: 1, translateY: 0 }}
+  transition={{ delay: 550, damping: 12 }}
+  style={styles.card}
+>
+  <Text style={styles.sectionTitle}>🚚 Taxa de entrega</Text>
+  <Text style={styles.cardDescricao}>Defina o valor cobrado por entrega da sua loja.</Text>
 
-      <TouchableOpacity
-        style={[styles.payButton, totalComissao <= 0 && styles.payButtonDisabled]}
-        onPress={handlePayment}
-        disabled={totalComissao <= 0 || paymentLoading}
-      >
-        {paymentLoading ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <Text style={styles.payButtonText}>Efetuar Pagamento da Comissão</Text>
-        )}
-      </TouchableOpacity>
+  <TextInput
+    style={styles.input}
+    placeholder="Ex: 5.00"
+    keyboardType="numeric"
+    value={taxaEntrega ?? ""}
+    onChangeText={setTaxaEntrega}
+  />
 
-      <View style={styles.divider} />
+  <TouchableOpacity style={styles.botaoSalvar} onPress={handleSaveDeliveryFee} disabled={savingDeliveryFee}>
+    {savingDeliveryFee ? (
+      <ActivityIndicator size="small" color="#fff" />
+    ) : (
+      <Text style={styles.botaoTexto}>Salvar taxa de entrega</Text>
+    )}
+  </TouchableOpacity>
+</MotiView>
 
-      <View style={styles.deliverySection}>
-        <Text style={styles.deliveryTitle}>Configurar Taxa de Entrega</Text>
-        <Text style={styles.deliverySubtitle}>Defina o valor que sua loja cobrará por entrega.</Text>
+  </ScrollView>
+);
 
-        <Text style={styles.inputLabel}>Valor da Taxa (R$)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: 5.00"
-          keyboardType="numeric"
-          value={taxaEntrega ?? ""}
-          onChangeText={setTaxaEntrega}
-        />
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveDeliveryFee} disabled={savingDeliveryFee}>
-          {savingDeliveryFee ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Salvar Taxa de Entrega</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  )
 }
 
 const styles = StyleSheet.create({
@@ -253,27 +301,159 @@ const styles = StyleSheet.create({
   header: { alignItems: "center", marginBottom: 20 },
   title: { fontSize: 24, fontWeight: "bold", color: "#333", marginTop: 10 },
   subtitle: { fontSize: 14, color: "#666", textAlign: "center", marginTop: 5 },
+
   balanceCard: { backgroundColor: "#E8F5E9", borderRadius: 16, padding: 24, marginBottom: 20, borderWidth: 2, borderColor: "#4CAF50" },
   balanceHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   balanceLabel: { fontSize: 16, color: "#2E7D32", fontWeight: "600", marginLeft: 8 },
   balanceValue: { fontSize: 42, fontWeight: "bold", color: "#1B5E20", marginBottom: 12 },
+
   transferInfo: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", padding: 12, borderRadius: 8 },
   transferText: { fontSize: 14, color: "#666", marginLeft: 8, fontWeight: "500" },
+
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  sectionTitle: { fontSize: 20, fontWeight: "bold", color: "#333", marginLeft: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#222", marginBottom: 12 },
   sectionSubtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 20, paddingHorizontal: 10 },
-  card: { backgroundColor: "#fff", borderRadius: 12, padding: 20, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, marginBottom: 20 },
+
+  // Unified card style (removed duplicate keys)
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
   cardLabel: { fontSize: 16, color: "#666", marginBottom: 10 },
   cardValue: { fontSize: 36, fontWeight: "bold", color: "#E53935" },
+
   payButton: { backgroundColor: "#4CAF50", borderRadius: 8, padding: 16, alignItems: "center", marginBottom: 20 },
   payButtonDisabled: { backgroundColor: "#ccc" },
   payButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+
   divider: { height: 1, backgroundColor: "#ddd", marginVertical: 20 },
+
   deliverySection: { backgroundColor: "#fff", borderRadius: 12, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   deliveryTitle: { fontSize: 20, fontWeight: "bold", color: "#333", marginBottom: 5 },
   deliverySubtitle: { fontSize: 14, color: "#666", marginBottom: 20 },
+
   inputLabel: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 8 },
   input: { backgroundColor: "#f9f9f9", borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 20 },
+
   saveButton: { backgroundColor: "#007AFF", borderRadius: 8, padding: 16, alignItems: "center" },
   saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+
+  cardPrimary: {
+    backgroundColor: "#E9F8EF",
+    borderRadius: 16,
+    padding: 22,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: "#0B7709",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+
+  saldoValor: {
+    fontSize: 42,
+    fontWeight: "bold",
+    color: "#0B7709",
+    marginBottom: 10,
+  },
+
+  transferenciaBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 10,
+    borderRadius: 8,
+  },
+
+  transferenciaTexto: {
+    marginLeft: 6,
+    color: "#444",
+    fontWeight: "500",
+    fontSize: 14,
+  },
+
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginLeft: 8,
+  },
+
+  textMuted: {
+    color: "#888",
+    fontSize: 14,
+  },
+
+  repasseItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    paddingVertical: 8,
+  },
+
+  repasseData: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+  },
+
+  repasseLegenda: {
+    fontSize: 12,
+    color: "#888",
+  },
+
+  repasseValor: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#0B7709",
+  },
+
+  valorComissao: {
+    fontSize: 34,
+    fontWeight: "bold",
+    color: "#E53935",
+    marginBottom: 6,
+  },
+
+  cardDescricao: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 12,
+  },
+
+  botaoPagamento: {
+    backgroundColor: "#0B7709",
+    padding: 14,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+
+  botaoDesativado: {
+    backgroundColor: "#ccc",
+  },
+
+  botaoSalvar: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    padding: 14,
+    alignItems: "center",
+  },
+
+  botaoTexto: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
 })
