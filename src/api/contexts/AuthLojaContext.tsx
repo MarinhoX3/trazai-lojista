@@ -61,18 +61,25 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // 🔹 Redirecionamento automático
-  useEffect(() => {
-    if (!navigationState?.key || loading) return;
+ useEffect(() => {
+  if (!navigationState?.key || loading) return;
 
-    const inAuthGroup =
-      segments[0] === "login" || segments[0] === "register-loja";
+  const inAuthGroup = segments[0] === "(auth)";
+  const inTabsGroup = segments[0] === "(tabs)";
 
-    if (!loja && !inAuthGroup) {
-      router.replace("/login");
-    } else if (loja && inAuthGroup) {
-      router.replace("/(tabs)");
-    }
-  }, [loja, segments, navigationState?.key, loading]);
+  // Usuário deslogado → força ir para login
+  if (!loja && !inAuthGroup) {
+    router.replace("/login");
+    return;
+  }
+
+  // Usuário logado tentando acessar telas de login → manda pro app
+  if (loja && inAuthGroup) {
+    router.replace("/(tabs)");
+    return;
+  }
+}, [loja, segments, navigationState?.key, loading]);
+
 
   const login = async (lojaData: AuthLoja, authToken: string) => {
     setLoja(lojaData);
