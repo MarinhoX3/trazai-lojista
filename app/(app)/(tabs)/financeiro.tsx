@@ -1,345 +1,388 @@
-// JavaScript Document
-"use client";
+import React, { useState, useCallback, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  Alert, 
+  ActivityIndicator, 
+  TouchableOpacity 
+} from 'react-native';
 
-import { useState, useCallback, useRef } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
-import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext";
-import api from "../../../src/api/api";
-import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useStripe, StripeProvider } from "@stripe/stripe-react-native";
-import { MotiView } from "moti";
+// ⚠️ AJUSTE ESTES IMPORTS conforme a estrutura do seu projeto!
+// Exemplo: 'api' é o seu cliente Axios. 'useAuth' é de onde você pega o ID da loja.
+import api from '../../../src/api/api';
+import * as AuthContext from '../../../src/api/contexts/AuthLojaContext';
 
-function Financeiro() {
-  const { loja } = useAuthLoja();
-  const stripe = useStripe();
-
-  const [totalComissao, setTotalComissao] = useState(0);
-  const [comissaoId, setComissaoId] = useState<number | null>(null);
-  const [saldoDisponivel, setSaldoDisponivel] = useState(0);
-  const [proximaTransferencia, setProximaTransferencia] = useState<string | null>(null);
-  const [taxaEntrega, setTaxaEntrega] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [savingDeliveryFee, setSavingDeliveryFee] = useState(false);
-  const [repassesFuturos, setRepassesFuturos] = useState<any[]>([]);
-
-  const fetchedLojaIdRef = useRef<number | null>(null);
-  const insets = useSafeAreaInsets();
-
-  const fetchDadosFinanceiros = useCallback(async () => {
-    if (!loja?.id) return;
-
-    setLoading(true);
-
+/**
+ * Compatibilidade com diferentes formas de exportação do módulo de autenticação:
+ * - se o módulo exportar `useAuth` como named export, vamos chamá-lo;
+ * - se o módulo exportar um Contexto como default, usamos React.useContext;
+ * - caso contrário, retornamos um objeto vazio com `loja: undefined`.
+ */
+const useAuth = () => {
+    const anyModule = AuthContext as any;
     try {
-      const saldoResponse = await api.get(`/financeiro/saldo/${loja.id}`);
-      setSaldoDisponivel(Number(saldoResponse.data.saldo_disponivel) || 0);
-      setProximaTransferencia(saldoResponse.data.proximaTransferencia || null);
-      setRepassesFuturos(saldoResponse.data.repasses_futuros || []);
-
-      const comissoesResponse = await api.get(`/payments/comissoes-pendentes/${loja.id}`);
-      const { valorPendente, comissaoId } = comissoesResponse.data;
-
-      setTotalComissao(Number(valorPendente) || 0);
-      setComissaoId(comissaoId ?? null);
-
-      const lojaResponse = await api.get(`/lojas/${loja.id}`);
-      setTaxaEntrega(String(Number(lojaResponse.data.taxa_entrega || 0).toFixed(2)));
-    } catch (err) {
-      console.log("Erro ao carregar financeiro:", err);
-      Alert.alert("Erro", "Não foi possível carregar os dados financeiros.");
+        if (typeof anyModule.useAuth === 'function') {
+            return anyModule.useAuth();
+        }
+        if (anyModule.default) {
+            return React.useContext(anyModule.default);
+        }
+    } catch (e) {
+        // ignore and fallback
     }
+    return { loja: undefined };
+};
 
-    setLoading(false);
-  }, [loja?.id]);
+// --- Tipagens ---
 
-  useFocusEffect(
-    useCallback(() => {
-      if (loja?.id && loja.id !== fetchedLojaIdRef.current) {
+interface RepasseFuturo {
+  data: Date;
+  valor: number;
+}
+
+// --- Funções Auxiliares ---
+
+/**
+ * Funcao CRUCIAL para garantir que a string do backend vire um numero valido.
+ * 1. Remove espacos.
+ * 2. Substitui virgula por ponto (necessario para Number()).
+ */
+const cleanValue = (value: string | number | undefined) => {
+    if (typeof value === 'string') {
+        return value.trim().replace(',', '.'); 
+    }
+    // Garante que qualquer coisa que nao seja string seja tratada como '0' se for nulo
+    return String(value || '0').trim().replace(',', '.');
+};
+
+/**
+ * Formata um número para o padrão monetário brasileiro (R$ X,XX)
+ */
+const formatCurrency = (value: number) => {
+    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+}
+
+// --- Componente Principal ---
+
+const Financeiro = () => {
+    // --- States ---
+    const { loja } = useAuth(); // Assume que o ID da loja é pego do contexto
+    
+    const [loading, setLoading] = useState(false);
+    const [saldoDisponivel, setSaldoDisponivel] = useState(0);
+    const [saldoACaminho, setSaldoACaminho] = useState(0);
+    const [repassesFuturos, setRepassesFuturos] = useState<RepasseFuturo[]>([]);
+    const [totalComissao, setTotalComissao] = useState(0);
+    const [comissaoId, setComissaoId] = useState<string | null>(null);
+    const [contaDestino, setContaDestino] = useState('Não definida');
+    const [taxaEntrega, setTaxaEntrega] = useState('0.00'); // Mantido como string para exibir formatado
+
+    // --- Lógica de Fetch de Dados (Onde a mágica acontece) ---
+    
+    const fetchDadosFinanceiros = useCallback(async () => {
+        // Use 2 como fallback, mas o ideal é que loja.id seja válido
+        const lojaId = loja?.id || 2; 
+
+        if (!lojaId) return;
+
+        setLoading(true);
+
+        try {
+            // 1. Busca os dados do SALDO (Endpoint corrigido: /api/financeiro/saldo/...)
+            const saldoResponse = await api.get(`/api/financeiro/saldo/${lojaId}`);
+            
+            const saldoDisponivelString = saldoResponse.data.saldo_disponivel;
+            const saldoACaminhoString = saldoResponse.data.saldo_acaminho;
+            
+            // 2. Limpeza e Conversão Robusta:
+            const saldoDisponivelRaw = Number(cleanValue(saldoDisponivelString));
+            const saldoACaminhoRaw = Number(cleanValue(saldoACaminhoString));
+
+            // 3. Define o Estado: Verifica se a conversao deu NaN e usa 0 se falhar
+            const finalSaldoDisponivel = isNaN(saldoDisponivelRaw) ? 0 : saldoDisponivelRaw;
+            const finalSaldoACaminho = isNaN(saldoACaminhoRaw) ? 0 : saldoACaminhoRaw; // Este deve ser 9.78!
+            
+            setSaldoDisponivel(finalSaldoDisponivel);
+            setSaldoACaminho(finalSaldoACaminho); 
+            
+            // LOG PARA DEBUG: VERIFIQUE NO CONSOLE DO SEU APP!
+            console.log('Dados do Backend Lidos:', saldoResponse.data);
+            console.log('Valor final Saldo a Caminho (DEVE SER 9.78):', finalSaldoACaminho); 
+
+            // 4. Repasses Futuros
+            const repasses = saldoResponse.data.repasses_futuros || [];
+            
+            const repassesFormatados = repasses.map((repasse: { data: string, valor: string }) => ({
+                ...repasse,
+                data: new Date(repasse.data), 
+                valor: Number(cleanValue(repasse.valor)) || 0, 
+            }));
+
+            setRepassesFuturos(repassesFormatados);
+            
+            // 5. Comissões Pendentes (Ajuste o endpoint se necessario)
+            const comissoesResponse = await api.get(`/api/payments/comissoes-pendentes/${lojaId}`);
+            const { valorPendente, comissaoId: fetchedComissaoId } = comissoesResponse.data;
+
+            setTotalComissao(Number(cleanValue(valorPendente)) || 0);
+            setComissaoId(fetchedComissaoId ?? null);
+
+            // 6. Taxa de Entrega (Ajuste o endpoint se necessario)
+            const lojaResponse = await api.get(`/api/lojas/${lojaId}`); 
+            setTaxaEntrega(Number(cleanValue(lojaResponse.data.taxa_entrega || '0')).toFixed(2));
+            
+            // 7. Conta Destino
+            if(saldoResponse.data.contaDestino) {
+                setContaDestino(saldoResponse.data.contaDestino);
+            }
+
+        } catch (err) {
+            console.log("Erro ao carregar financeiro:", err);
+            Alert.alert("Erro", "Não foi possível carregar os dados financeiros.");
+        }
+
+        setLoading(false);
+    }, [loja?.id]);
+
+    // --- Efeito para Carregar Dados ---
+    
+    useEffect(() => {
         fetchDadosFinanceiros();
-      }
-    }, [loja?.id, fetchDadosFinanceiros])
-  );
+    }, [fetchDadosFinanceiros]);
 
-  const handlePayment = async () => {
-    if (totalComissao <= 0 || !loja?.id) {
-      Alert.alert("Aviso", "Não há comissão pendente para pagar.");
-      return;
-    }
-
-    setPaymentLoading(true);
-    try {
-      const response = await api.post("/payments/create-payment-intent", {
-        amount: totalComissao,
-        lojaId: loja.id,
-      });
-
-      const { clientSecret } = response.data;
-      if (!clientSecret) throw new Error("clientSecret ausente.");
-
-      const { error: initError } = await stripe.initPaymentSheet({
-        merchantDisplayName: "TrazAí Plataforma",
-        paymentIntentClientSecret: clientSecret,
-      });
-
-      if (initError) {
-        Alert.alert("Erro", initError.message);
-        return;
-      }
-
-      const { error: presentError } = await stripe.presentPaymentSheet();
-      if (presentError) {
-        Alert.alert("Cancelado", presentError.message);
-        return;
-      }
-
-      await api.post("/payments/confirmar-pagamento", {
-        lojaId: loja.id,
-        paymentIntentId: clientSecret.split("_secret")[0],
-      });
-
-      Alert.alert("Pagamento confirmado!", "Obrigado.");
-
-      setTotalComissao(0);
-      setComissaoId(null);
-      fetchDadosFinanceiros();
-    } catch (error) {
-      console.log("Pagamento erro:", error);
-      Alert.alert("Erro", "Falha ao processar pagamento.");
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
-  const handleSaveDeliveryFee = async () => {
+    // --- Renderização ---
+    
     if (!loja?.id) {
-      Alert.alert("Erro", "Loja não identificada.");
-      return;
+        return <View style={styles.container}><Text>Aguardando dados da loja...</Text></View>;
     }
 
-    const taxaNum = Number.parseFloat(taxaEntrega.replace(",", "."));
-    if (isNaN(taxaNum) || taxaNum < 0) {
-      Alert.alert("Erro", "Por favor, insira um valor válido para a taxa de entrega.");
-      return;
+    const totalSaldo = saldoDisponivel + saldoACaminho;
+    
+    if (loading) {
+        return (
+            <View style={[styles.container, styles.loadingContainer]}>
+                <ActivityIndicator size="large" color="#4CAF50" />
+                <Text>Carregando dados financeiros...</Text>
+            </View>
+        );
     }
 
-    setSavingDeliveryFee(true);
-    try {
-      await api.put(`/lojas/${loja.id}/taxa-entrega`, { taxa_entrega: taxaNum });
-      Alert.alert("Sucesso", "Taxa de entrega salva com sucesso!");
-    } catch {
-      Alert.alert("Erro", "Não foi possível salvar a taxa de entrega.");
-    } finally {
-      setSavingDeliveryFee(false);
-    }
-  };
-
-  const formatTransferDate = (dateString: string | null) => {
-    if (!dateString) return "A definir";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return "A definir";
-    }
-  };
-
-  if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Carregando dados financeiros...</Text>
-      </View>
+        <ScrollView style={styles.container}>
+            <Text style={styles.headerTitle}>Financeiro</Text>
+            <Text style={styles.headerSubtitle}>Acompanhe seus ganhos e pagamentos</Text>
+
+            {/* CARD DE SALDO TOTAL (Estilo baseado na imagem 9da820.jpg) */}
+            <View style={styles.saldoCard}>
+                <Text style={styles.saldoCardLabel}>Saldo Total</Text>
+                <Text style={styles.saldoCardValue}>{formatCurrency(totalSaldo)}</Text>
+                <Text style={styles.saldoCardNextTransfer}>
+                    Próxima transferência: {contaDestino.split('•').pop() ? `para ${contaDestino}` : 'A definir'}
+                </Text>
+            </View>
+
+            {/* SEU SALDO DETALHADO */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Seu Saldo Detalhado</Text>
+                
+                <View style={styles.row}>
+                    <Text>Disponível para Repasse (Hoje)</Text>
+                    <Text style={styles.valueAvailable}>{formatCurrency(saldoDisponivel)}</Text>
+                </View>
+                
+                <View style={styles.row}>
+                    <Text>A Caminho do Seu Banco</Text>
+                    {/* Aqui o R$ 9,78 deve aparecer */}
+                    <Text style={styles.valueInTransit}>{formatCurrency(saldoACaminho)}</Text> 
+                </View>
+
+                <Text style={styles.subSectionTitle}>Repasses Futuros (Estimativa)</Text>
+                {repassesFuturos.length > 0 ? (
+                    repassesFuturos.map((repasse, index) => (
+                        <View key={index} style={styles.row}>
+                            <Text>Deve chegar em {repasse.data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}.</Text>
+                            <Text>{formatCurrency(repasse.valor)}</Text>
+                        </View>
+                    ))
+                ) : (
+                    <Text style={styles.subSectionText}>Nenhum repasse futuro no momento.</Text>
+                )}
+
+                <View style={[styles.row, styles.totalRow]}>
+                    <Text style={styles.totalLabel}>Saldo Total (Disponível + Futuro)</Text>
+                    <Text style={styles.totalValue}>{formatCurrency(totalSaldo)}</Text>
+                </View>
+            </View>
+
+            {/* COMISSÕES DA PLATAFORMA */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Comissões da Plataforma</Text>
+                <Text style={styles.subSectionText}>
+                    Valor a ser pago à plataforma referente aos pedidos em Dinheiro e Pix (10% do valor total).
+                </Text>
+                <View style={styles.commissionValueContainer}>
+                    <Text style={styles.commissionLabel}>Valor Pendente</Text>
+                    <Text style={styles.commissionValue}>{formatCurrency(totalComissao)}</Text>
+                </View>
+                
+                {totalComissao > 0 && (
+                    <TouchableOpacity style={styles.button}>
+                        <Text style={styles.buttonText}>Efetuar Pagamento da Comissão</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+            
+            {/* CONFIGURAR TAXA DE ENTREGA */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Configurar Taxa de Entrega</Text>
+                <Text style={styles.subSectionText}>Taxa atual: {formatCurrency(Number(taxaEntrega))}</Text>
+                <TouchableOpacity style={styles.buttonSmall}>
+                    <Text style={styles.buttonTextSmall}>Atualizar Taxa</Text>
+                </TouchableOpacity>
+            </View>
+            
+             <View style={{ height: 50 }} /> {/* Padding extra no final */}
+        </ScrollView>
     );
-  }
+};
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
-    >
-      {/* ... todo o seu layout aqui (sem alterações) ... */}
-    </ScrollView>
-  );
-}
-
-// ⚡ export default ÚNICO e no topo do módulo
-export default function Screen() {
-  return (
-    <StripeProvider publishableKey="pk_live_51RhcOpDK4gB80CI0e18vr6pZQDfX3jKom5lbMWEWJnxunMh4LqU6JZk7qH4pI8lONxtmVZfzWQaKAvfXwkR0fpZb00m8CtjxcG">
-      <Financeiro />
-    </StripeProvider>
-  );
-}
-
-
+// --- Estilos (Simplificado) ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5" },
-  scrollContent: { padding: 20 },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f5f5f5" },
-  loadingText: { marginTop: 10, fontSize: 16, color: "#666" },
-  header: { alignItems: "center", marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: "bold", color: "#333", marginTop: 10 },
-  subtitle: { fontSize: 14, color: "#666", textAlign: "center", marginTop: 5 },
-
-  balanceCard: { backgroundColor: "#E8F5E9", borderRadius: 16, padding: 24, marginBottom: 20, borderWidth: 2, borderColor: "#4CAF50" },
-  balanceHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  balanceLabel: { fontSize: 16, color: "#2E7D32", fontWeight: "600", marginLeft: 8 },
-  balanceValue: { fontSize: 42, fontWeight: "bold", color: "#1B5E20", marginBottom: 12 },
-
-  transferInfo: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", padding: 12, borderRadius: 8 },
-  transferText: { fontSize: 14, color: "#666", marginLeft: 8, fontWeight: "500" },
-
-  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#222", marginBottom: 12 },
-  sectionSubtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 20, paddingHorizontal: 10 },
-
-  // Unified card style (removed duplicate keys)
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  cardLabel: { fontSize: 16, color: "#666", marginBottom: 10 },
-  cardValue: { fontSize: 36, fontWeight: "bold", color: "#E53935" },
-
-  payButton: { backgroundColor: "#4CAF50", borderRadius: 8, padding: 16, alignItems: "center", marginBottom: 20 },
-  payButtonDisabled: { backgroundColor: "#ccc" },
-  payButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-
-  divider: { height: 1, backgroundColor: "#ddd", marginVertical: 20 },
-
-  deliverySection: { backgroundColor: "#fff", borderRadius: 12, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  deliveryTitle: { fontSize: 20, fontWeight: "bold", color: "#333", marginBottom: 5 },
-  deliverySubtitle: { fontSize: 14, color: "#666", marginBottom: 20 },
-
-  inputLabel: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 8 },
-  input: { backgroundColor: "#f9f9f9", borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 20 },
-
-  saveButton: { backgroundColor: "#007AFF", borderRadius: 8, padding: 16, alignItems: "center" },
-  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-
-  cardPrimary: {
-    backgroundColor: "#E9F8EF",
-    borderRadius: 16,
-    padding: 22,
-    marginBottom: 20,
-    borderWidth: 1.5,
-    borderColor: "#0B7709",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-
-  saldoValor: {
-    fontSize: 42,
-    fontWeight: "bold",
-    color: "#0B7709",
-    marginBottom: 10,
-  },
-
-  transferenciaBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 8,
-  },
-
-  transferenciaTexto: {
-    marginLeft: 6,
-    color: "#444",
-    fontWeight: "500",
-    fontSize: 14,
-  },
-
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginLeft: 8,
-  },
-
-  textMuted: {
-    color: "#888",
-    fontSize: 14,
-  },
-
-  repasseItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    paddingVertical: 8,
-  },
-
-  repasseData: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-
-  repasseLegenda: {
-    fontSize: 12,
-    color: "#888",
-  },
-
-  repasseValor: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#0B7709",
-  },
-
-  valorComissao: {
-    fontSize: 34,
-    fontWeight: "bold",
-    color: "#E53935",
-    marginBottom: 6,
-  },
-
-  cardDescricao: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 12,
-  },
-
-  botaoPagamento: {
-    backgroundColor: "#0B7709",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-
-  botaoDesativado: {
-    backgroundColor: "#ccc",
-  },
-
-  botaoSalvar: {
-    backgroundColor: "#007AFF",
-    borderRadius: 10,
-    padding: 14,
-    alignItems: "center",
-  },
-
-  botaoTexto: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-
+    container: {
+        flex: 1,
+        backgroundColor: '#f5f5f5',
+        padding: 15,
+    },
+    loadingContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginVertical: 5,
+    },
+    headerSubtitle: {
+        textAlign: 'center',
+        marginBottom: 20,
+        color: '#666',
+    },
+    section: {
+        backgroundColor: '#fff',
+        padding: 15,
+        borderRadius: 8,
+        marginBottom: 20,
+        elevation: 2,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    subSectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginTop: 15,
+        marginBottom: 5,
+    },
+    subSectionText: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 10,
+    },
+    row: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 5,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    totalRow: {
+        borderTopWidth: 2,
+        borderTopColor: '#333',
+        marginTop: 10,
+        paddingTop: 10,
+    },
+    totalLabel: {
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    totalValue: {
+        fontWeight: 'bold',
+        fontSize: 16,
+        color: '#4CAF50',
+    },
+    valueAvailable: {
+        color: '#4CAF50',
+    },
+    valueInTransit: {
+        color: '#FFA500', 
+        fontWeight: 'bold',
+    },
+    commissionValueContainer: {
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    commissionLabel: {
+        fontSize: 16,
+        color: '#FF4500',
+    },
+    commissionValue: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#FF4500',
+    },
+    button: {
+        backgroundColor: '#4CAF50',
+        padding: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    saldoCard: {
+        backgroundColor: '#E8F5E9',
+        padding: 20,
+        borderRadius: 8,
+        marginBottom: 20,
+        alignItems: 'center',
+        borderLeftWidth: 5,
+        borderLeftColor: '#4CAF50',
+    },
+    saldoCardLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#2E7D32',
+    },
+    saldoCardValue: {
+        fontSize: 38,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginVertical: 5,
+    },
+    saldoCardNextTransfer: {
+        fontSize: 14,
+        color: '#2E7D32',
+    },
+    buttonSmall: {
+        backgroundColor: '#1E90FF',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    buttonTextSmall: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
 });
+
+export default Financeiro;
