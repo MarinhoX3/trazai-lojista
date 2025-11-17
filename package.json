@@ -28,6 +28,7 @@
     "expo-status-bar": "~3.0.8",
     "expo-web-browser": "^15.0.8",
     "moti": "^0.30.0",
+    "node-cron": "^4.2.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.60.0",
