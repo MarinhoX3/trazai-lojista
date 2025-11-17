@@ -1,3 +1,5 @@
+// app/_layout.tsx
+
 import React, { useEffect } from 'react';
 import { Stack, SplashScreen } from 'expo-router';
 import { View, ActivityIndicator, Text } from 'react-native';

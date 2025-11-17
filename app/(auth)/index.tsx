@@ -64,7 +64,7 @@ export default function LoginScreen() {
     // Chama a função login do contexto
     await login(lojaData, response.data.token);
 
-    router.replace("/dashboard");
+   router.replace("/(app)/(tabs)");
 
   } catch (error: any) {
     if (error.response?.data?.message) {
@@ -145,7 +145,7 @@ export default function LoginScreen() {
           )}
         </View>
 
-        <Link href="/register" asChild>
+        <Link href="/(auth)/register" asChild>
           <Pressable>
             <Text style={styles.linkText}>
               Ainda não tem uma conta? Cadastre-se
