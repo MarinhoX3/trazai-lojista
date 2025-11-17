@@ -1,3 +1,4 @@
+// app/(auth)/index.tsx
 import React, { useState } from 'react';
 import { 
   View, 
@@ -64,7 +65,7 @@ export default function LoginScreen() {
     // Chama a função login do contexto
     await login(lojaData, response.data.token);
 
-   router.replace("/(app)/(tabs)");
+  router.replace("(app)/(tabs)/dashboard");
 
   } catch (error: any) {
     if (error.response?.data?.message) {
@@ -146,6 +147,8 @@ export default function LoginScreen() {
         </View>
 
         <Link href="/(auth)/register" asChild>
+
+
           <Pressable>
             <Text style={styles.linkText}>
               Ainda não tem uma conta? Cadastre-se

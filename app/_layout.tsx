@@ -1,8 +1,6 @@
-// app/_layout.tsx
-
 import React, { useEffect } from 'react';
 import { Stack, SplashScreen } from 'expo-router';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { AuthLojaProvider, useAuthLoja } from '../src/api/contexts/AuthLojaContext';
 import { PedidosAtivosProvider } from '../src/api/contexts/PedidosAtivosContext';
 import { StripeProvider } from '@stripe/stripe-react-native';
@@ -13,45 +11,37 @@ export default function RootLayout() {
   return (
     <AuthLojaProvider>
       <PedidosAtivosProvider>
-        <StripeProvider publishableKey="pk_test_51RhcOyD1ANZNVvcx26pdZ0aueqotnqyYc7yP7QTKFNWvujPT6EwGCDwhzg1MeEbk5CENAaTEswgAYqn7KH5YMh6z00KcsS2jnS">
-          <RootLayoutNav />
+        <StripeProvider publishableKey="pk_test_XXXX">
+          <RootNavigation />
         </StripeProvider>
       </PedidosAtivosProvider>
     </AuthLojaProvider>
   );
 }
 
-function RootLayoutNav() {
+function RootNavigation() {
   const { loja, loading } = useAuthLoja();
 
   useEffect(() => {
-    if (!loading) {
-      SplashScreen.hideAsync();
-    }
+    if (!loading) SplashScreen.hideAsync();
   }, [loading]);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-        <ActivityIndicator size="large" color="#007BFF" />
-        <Text style={{ marginTop: 10 }}>Carregando dados da loja...</Text>
+      <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
+        <ActivityIndicator size="large" />
+        <Text>Carregando...</Text>
       </View>
     );
   }
 
-  // 🔹 NÃO logado → carregue o GRUPO (auth)
-  if (!loja) {
-    return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-      </Stack>
-    );
-  }
-
-  // 🔹 Logado → carregue o GRUPO (app)
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(app)" />
+      {!loja ? (
+        <Stack.Screen name="(auth)" />
+      ) : (
+        <Stack.Screen name="(app)" />
+      )}
     </Stack>
   );
 }

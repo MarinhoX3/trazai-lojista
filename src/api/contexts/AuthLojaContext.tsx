@@ -40,46 +40,27 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   usePushNotifications(loja?.id);
 
   useEffect(() => {
-    const loadStorageData = async () => {
-      try {
-        const storedLoja = await AsyncStorage.getItem("@AppLojista:loja");
-        const storedToken = await AsyncStorage.getItem("@AppLojista:token");
+  const loadStorageData = async () => {
+    try {
+      const storedLoja = await AsyncStorage.getItem("@AppLojista:loja");
+      const storedToken = await AsyncStorage.getItem("@AppLojista:token");
 
-        if (storedLoja && storedToken) {
-          const parsedLoja: AuthLoja = JSON.parse(storedLoja);
-          setLoja(parsedLoja);
-          setToken(storedToken);
-          api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
-        }
-      } catch (error) {
-        console.error("❌ Erro ao carregar dados do AsyncStorage:", error);
-      } finally {
-        setLoading(false);
+      if (storedLoja && storedToken) {
+        const parsedLoja: AuthLoja = JSON.parse(storedLoja);
+        setLoja(parsedLoja);
+        setToken(storedToken);
+        api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
       }
-    };
-    loadStorageData();
-  }, []);
+    } finally {
+      setLoading(false);
+    }
+  };
+  loadStorageData();
+}, []);
+
 
   // 🔹 Redirecionamento automático
- useEffect(() => {
-  if (!navigationState?.key || loading) return;
-
-  const inAuthGroup = segments[0] === "(auth)";
-  const inTabsGroup = segments[0] === "(tabs)";
-
-  // Usuário deslogado → força ir para login
-  if (!loja && !inAuthGroup) {
-    router.replace("/login");
-    return;
-  }
-
-  // Usuário logado tentando acessar telas de login → manda pro app
-  if (loja && inAuthGroup) {
-    router.replace("/(tabs)");
-    return;
-  }
-}, [loja, segments, navigationState?.key, loading]);
-
+ 
 
   const login = async (lojaData: AuthLoja, authToken: string) => {
     setLoja(lojaData);
@@ -96,7 +77,8 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     delete api.defaults.headers.common["Authorization"];
     await AsyncStorage.removeItem("@AppLojista:loja");
     await AsyncStorage.removeItem("@AppLojista:token");
-    router.replace("/login");
+    router.replace("(auth)");
+
   };
 
   const updateAuthLoja = async (
