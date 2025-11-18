@@ -38,6 +38,7 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   const navigationState = useRootNavigationState();
 
   usePushNotifications(loja?.id);
+  
 
   useEffect(() => {
   const loadStorageData = async () => {

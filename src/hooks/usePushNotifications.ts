@@ -77,7 +77,9 @@ export function usePushNotifications(id_loja: number | undefined) {
       registerForPushNotificationsAsync(id_loja).then(token => setExpoPushToken(token));
     }
 
+    // 🛑 SUBSTITUA A LINHA ABAIXO PELA VERSÃO DE DEBUG 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log("🔔 NOTIFICAÇÃO RECEBIDA NO APP:", notification); // ⬅️ AQUI ESTÁ O NOVO LOG!
       setNotification(notification);
     });
 
