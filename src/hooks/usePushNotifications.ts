@@ -1,91 +1,122 @@
-import { useState, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
-import api from '../api/api';
+import { useState, useEffect, useRef } from "react";
+import { Platform } from "react-native";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
+import api from "../api/api";
 
+// 🔔 CONFIG DO HANDLER (Android 13+ precisa disto)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
-    shouldShowBanner: true, // Nova propriedade
-    shouldShowList: true,   // Nova propriedade
   }),
 });
 
+// ==========================================================
+// 🔹 Função responsável por registrar e enviar token ao backend
+// ==========================================================
 async function registerForPushNotificationsAsync(id_loja: number) {
-  let token;
+  let token: string | undefined;
+
+  console.log("📌 (DEBUG) Registrando push do lojista:", id_loja);
+  console.log("📌 Project ID:", Constants.expoConfig?.extra?.eas?.projectId);
 
   if (!Device.isDevice) {
-    alert('As notificações push só funcionam em dispositivos físicos.');
+    console.warn("⚠ Push notifications só funcionam em dispositivo físico!");
     return;
   }
 
+  // Pedido de permissão
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
-  if (existingStatus !== 'granted') {
+
+  if (existingStatus !== "granted") {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
-  if (finalStatus !== 'granted') {
-    alert('Falha ao obter o token para notificações push! A permissão não foi concedida.');
+
+  if (finalStatus !== "granted") {
+    console.warn("⚠ Permissão para notificações negada!");
     return;
   }
 
   try {
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+
     if (!projectId) {
-      throw new Error('Project ID não encontrado na configuração do app.');
+      console.error("❌ Project ID não encontrado no app.json!");
+      return;
     }
+
     token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-  } catch (e) {
-    console.error("Erro ao obter o push token:", e);
+    console.log("🔔 TOKEN EXPO OBTIDO:", token);
+
+  } catch (error) {
+    console.error("❌ Erro ao gerar token Expo:", error);
     return;
   }
 
+  // Envia token ao backend
   if (token) {
     try {
       await api.post(`/lojas/${id_loja}/push-token`, { token });
-      console.log("Token de notificação salvo com sucesso no backend.");
+      console.log("✅ Token salvo com sucesso no backend.");
     } catch (error) {
-      console.error("Erro ao enviar o token para o backend:", error);
+      console.error("❌ Erro ao enviar token ao backend:", error);
     }
   }
 
-  if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+  // Criar canal Android
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
       importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
     });
   }
 
   return token;
 }
 
+// ==========================================================
+// HOOK PRINCIPAL
+// ==========================================================
 export function usePushNotifications(id_loja: number | undefined) {
-  const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
-  const [notification, setNotification] = useState<Notifications.Notification | undefined>();
+  const [expoPushToken, setExpoPushToken] = useState<string>();
+  const [notification, setNotification] =
+    useState<Notifications.Notification>();
 
-  const notificationListener = useRef<Notifications.Subscription | null>(null);
-  const responseListener = useRef<Notifications.Subscription | null>(null);
+const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
+
+  const alreadyRegistered = useRef(false);
 
   useEffect(() => {
-    if (id_loja) {
-      registerForPushNotificationsAsync(id_loja).then(token => setExpoPushToken(token));
-    }
+    if (!id_loja) return; // Evita undefined
 
-    // 🛑 SUBSTITUA A LINHA ABAIXO PELA VERSÃO DE DEBUG 
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log("🔔 NOTIFICAÇÃO RECEBIDA NO APP:", notification); // ⬅️ AQUI ESTÁ O NOVO LOG!
-      setNotification(notification);
-    });
+    if (alreadyRegistered.current) return; // Evita duplicidade
+    alreadyRegistered.current = true;
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log(response);
-    });
+    // Registrar token
+    registerForPushNotificationsAsync(id_loja).then((token) =>
+      setExpoPushToken(token)
+    );
+
+    // Listener quando receber notificação
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener((notification) => {
+        console.log("📥 NOTIFICAÇÃO RECEBIDA:", notification);
+        setNotification(notification);
+      });
+
+    // Listener quando o usuário toca na notificação
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log("📲 AÇÃO DO USUÁRIO:", response);
+      });
 
     return () => {
       notificationListener.current?.remove();
