@@ -8,12 +8,14 @@ import api from "../api/api";
 // 🔔 CONFIG DO HANDLER (Android 13+ precisa disto)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
+    shouldShowAlert: true,
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
 });
+
 
 // ==========================================================
 // 🔹 Função responsável por registrar e enviar token ao backend
