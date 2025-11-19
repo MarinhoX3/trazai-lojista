@@ -37,26 +37,30 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   const navigationState = useRootNavigationState(); // só navega quando o router estiver pronto
 
   // 🔥 1. Carregar login do AsyncStorage no início
-  useEffect(() => {
-    const loadStorageData = async () => {
-      try {
-        const storedLoja = await AsyncStorage.getItem("@AppLojista:loja");
-        const storedToken = await AsyncStorage.getItem("@AppLojista:token");
+ useEffect(() => {
+  if (!navigationState?.key) return;
 
-        if (storedLoja && storedToken) {
-          const parsedLoja: AuthLoja = JSON.parse(storedLoja);
-          setLoja(parsedLoja);
-          setToken(storedToken);
+  const group = segments[0]; // "(auth)" ou "(app)"
 
-          api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+  if (loading) return;
 
-    loadStorageData();
-  }, []);
+  // 👉 Não autenticado
+  if (!loja) {
+    if (group !== "(auth)") {
+      router.replace("/(auth)");
+    }
+    return;
+  }
+
+  // 👉 Autenticado
+  if (loja) {
+    // Se está no grupo errado (ex: "(auth)") → envia para as tabs
+    if (group !== "(app)") {
+      router.replace("/(app)/(tabs)");
+    }
+    return;
+  }
+}, [loading, loja, segments, navigationState]);
 
   // 🔥 2. Route Guard — evita logout automático ao minimizar o app
   useEffect(() => {
