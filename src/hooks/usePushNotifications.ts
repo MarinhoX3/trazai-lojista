@@ -1,11 +1,15 @@
+// File: src/hooks/usePushNotifications.ts
 import { useState, useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import api from "../api/api";
+ // ✅ CORRETO
 
-// 🔔 CONFIG DO HANDLER (Android 13+ precisa disto)
+// =============================================================
+// 🔔 CONFIGURAÇÃO DO HANDLER — mostra alertas, banners e sons
+// =============================================================
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -16,14 +20,13 @@ Notifications.setNotificationHandler({
   }),
 });
 
-
-// ==========================================================
-// 🔹 Função responsável por registrar e enviar token ao backend
-// ==========================================================
-async function registerForPushNotificationsAsync(id_loja: number) {
+// =============================================================
+// 1️⃣ FUNÇÃO PARA GERAR E ENVIAR O TOKEN AO BACKEND
+// =============================================================
+export async function registerForPushNotificationsAsync(id_loja: number) {
   let token: string | undefined;
 
-  console.log("📌 (DEBUG) Registrando push do lojista:", id_loja);
+  console.log("📌 Registrando push do lojista:", id_loja);
   console.log("📌 Project ID:", Constants.expoConfig?.extra?.eas?.projectId);
 
   if (!Device.isDevice) {
@@ -31,7 +34,7 @@ async function registerForPushNotificationsAsync(id_loja: number) {
     return;
   }
 
-  // Pedido de permissão
+  // Pedir permissão
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
@@ -55,13 +58,11 @@ async function registerForPushNotificationsAsync(id_loja: number) {
 
     token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
     console.log("🔔 TOKEN EXPO OBTIDO:", token);
-
   } catch (error) {
     console.error("❌ Erro ao gerar token Expo:", error);
     return;
   }
 
-  // Envia token ao backend
   if (token) {
     try {
       await api.post(`/lojas/${id_loja}/push-token`, { token });
@@ -82,39 +83,35 @@ async function registerForPushNotificationsAsync(id_loja: number) {
   return token;
 }
 
-// ==========================================================
-// HOOK PRINCIPAL
-// ==========================================================
+// =============================================================
+// 2️⃣ HOOK PRINCIPAL — responsável por LISTENERS
+// =============================================================
 export function usePushNotifications(id_loja: number | undefined) {
   const [expoPushToken, setExpoPushToken] = useState<string>();
-  const [notification, setNotification] =
-    useState<Notifications.Notification>();
+  const [notification, setNotification] = useState<Notifications.Notification>();
 
-const notificationListener = useRef<Notifications.EventSubscription | null>(null);
-const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
-
-  const alreadyRegistered = useRef(false);
+  const registeredId = useRef<number | null>(null); // 🔒 PROTEÇÃO REAL
 
   useEffect(() => {
-    if (!id_loja) return; // Evita undefined
+    if (!id_loja) return;
 
-    if (alreadyRegistered.current) return; // Evita duplicidade
-    alreadyRegistered.current = true;
+    // 👇 EVITA registrar mais de 1 vez por ID de loja
+    if (registeredId.current === id_loja) return;
+    registeredId.current = id_loja;
 
-    // Registrar token
     registerForPushNotificationsAsync(id_loja).then((token) =>
       setExpoPushToken(token)
     );
 
-    // Listener quando receber notificação
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
         console.log("📥 NOTIFICAÇÃO RECEBIDA:", notification);
         setNotification(notification);
       });
 
-    // Listener quando o usuário toca na notificação
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         console.log("📲 AÇÃO DO USUÁRIO:", response);

@@ -1,11 +1,11 @@
 // app/_layout.tsx
-import React, { useEffect } from 'react';
-import { Stack, SplashScreen } from 'expo-router';
-import { View, Text, ActivityIndicator } from 'react-native';
-import { AuthLojaProvider, useAuthLoja } from '../src/api/contexts/AuthLojaContext';
-import { PedidosAtivosProvider } from '../src/api/contexts/PedidosAtivosContext';
-import { StripeProvider } from '@stripe/stripe-react-native';
-import { usePushNotifications } from '../src/hooks/usePushNotifications';
+import React, { useEffect, useRef } from "react";
+import { Stack, SplashScreen } from "expo-router";
+import { View, Text, ActivityIndicator } from "react-native";
+import { AuthLojaProvider, useAuthLoja } from "../src/api/contexts/AuthLojaContext";
+import { PedidosAtivosProvider } from "../src/api/contexts/PedidosAtivosContext";
+import { StripeProvider } from "@stripe/stripe-react-native";
+import { usePushNotifications } from "../src/hooks/usePushNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,8 +24,6 @@ export default function RootLayout() {
 function RootNavigation() {
   const { loja, loading } = useAuthLoja();
 
-  // 🔥 IMPORTANTE → inicializa notificações somente aqui
-  usePushNotifications(loja?.id);
 
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();

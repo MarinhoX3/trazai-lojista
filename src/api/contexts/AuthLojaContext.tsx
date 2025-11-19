@@ -1,4 +1,11 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useEffect,
+} from "react";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../api";
 import { useRouter, useSegments, useRootNavigationState } from "expo-router";
@@ -25,7 +32,9 @@ interface AuthLojaContextData {
   updateAuthLoja: (updatedData: Partial<AuthLoja>) => Promise<AuthLoja | null>;
 }
 
-const AuthLojaContext = createContext<AuthLojaContextData>({} as AuthLojaContextData);
+const AuthLojaContext = createContext<AuthLojaContextData>(
+  {} as AuthLojaContextData
+);
 
 export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   const [loja, setLoja] = useState<AuthLoja | null>(null);
@@ -33,93 +42,100 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const router = useRouter();
-  const segments = useSegments(); // para identificar qual grupo estamos "(auth)" ou "(tabs)"
-  const navigationState = useRootNavigationState(); // só navega quando o router estiver pronto
+  const segments = useSegments();
+  const navigationState = useRootNavigationState();
 
-  // 🔥 1. Carregar login do AsyncStorage no início
- useEffect(() => {
-  if (!navigationState?.key) return;
-
-  const group = segments[0]; // "(auth)" ou "(app)"
-
-  if (loading) return;
-
-  // 👉 Não autenticado
-  if (!loja) {
-    if (group !== "(auth)") {
-      router.replace("/(auth)");
-    }
-    return;
-  }
-
-  // 👉 Autenticado
-  if (loja) {
-    // Se está no grupo errado (ex: "(auth)") → envia para as tabs
-    if (group !== "(app)") {
-      router.replace("/(app)/(tabs)");
-    }
-    return;
-  }
-}, [loading, loja, segments, navigationState]);
-
-  // 🔥 2. Route Guard — evita logout automático ao minimizar o app
+  // 🔹 Carrega login do AsyncStorage
   useEffect(() => {
-    if (!navigationState || !navigationState.key) return; // só navega quando o router estiver pronto
+    const loadAuth = async () => {
+      try {
+        const storedLoja = await AsyncStorage.getItem("@AppLojista:loja");
+        const storedToken = await AsyncStorage.getItem("@AppLojista:token");
 
-    const inAuthGroup = segments[0] === "(auth)";
+        if (storedLoja && storedToken) {
+          const lojaData: AuthLoja = JSON.parse(storedLoja);
+          setLoja(lojaData);
+          setToken(storedToken);
 
-    if (loading) return; // ainda carregando AsyncStorage → NÃO navegar
+          api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+        }
+      } catch (err) {
+        console.error("Erro ao carregar autenticação:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (!loja && !inAuthGroup) {
-      router.replace("(auth)"); // não autenticado → vai para login
-    } else if (loja && inAuthGroup) {
-      router.replace("(tabs)"); // autenticado → vai para home
+    loadAuth();
+  }, []);
+
+  // 🔹 Controle de rotas
+  useEffect(() => {
+    if (!navigationState?.key) return;
+
+    const currentGroup = segments[0];
+
+    if (loading) return;
+
+    if (!loja) {
+      if (currentGroup !== "(auth)") router.replace("/(auth)");
+      return;
+    }
+
+    if (currentGroup !== "(app)") {
+      router.replace("/(app)/(tabs)/dashboard");
     }
   }, [loading, loja, segments, navigationState]);
 
-
-  // 🔥 3. Fazer login
+  // 🔹 Login
   const login = async (lojaData: AuthLoja, authToken: string) => {
-    setLoja(lojaData);
-    setToken(authToken);
+    try {
+      setLoja(lojaData);
+      setToken(authToken);
 
-    api.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
+      api.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
 
-    await AsyncStorage.setItem("@AppLojista:loja", JSON.stringify(lojaData));
-    await AsyncStorage.setItem("@AppLojista:token", authToken);
+      await AsyncStorage.setItem("@AppLojista:loja", JSON.stringify(lojaData));
+      await AsyncStorage.setItem("@AppLojista:token", authToken);
+
+      router.replace("/(app)/(tabs)/dashboard");
+    } catch (err) {
+      console.error("Erro no login:", err);
+    }
   };
 
-  // 🔥 4. Logout
+  // 🔹 Logout
   const logout = async () => {
-    setLoja(null);
-    setToken(null);
+    try {
+      setLoja(null);
+      setToken(null);
 
-    delete api.defaults.headers.common["Authorization"];
+      delete api.defaults.headers.common["Authorization"];
 
-    await AsyncStorage.removeItem("@AppLojista:loja");
-    await AsyncStorage.removeItem("@AppLojista:token");
+      await AsyncStorage.removeItem("@AppLojista:loja");
+      await AsyncStorage.removeItem("@AppLojista:token");
 
-    router.replace("(auth)");
+      router.replace("/(auth)");
+    } catch (err) {
+      console.error("Erro ao fazer logout:", err);
+    }
   };
 
-  // 🔥 5. Atualizar dados da loja e sincronizar com storage
-  const updateAuthLoja = async (
-    updatedData: Partial<AuthLoja>
-  ): Promise<AuthLoja | null> => {
+  // 🔹 Atualiza dados da loja
+  const updateAuthLoja = async (updatedData: Partial<AuthLoja>) => {
     try {
       setLoja((prev) => {
         if (!prev) return null;
 
-        const newLojaState = { ...prev, ...updatedData };
-        AsyncStorage.setItem("@AppLojista:loja", JSON.stringify(newLojaState));
-
-        return newLojaState;
+        const newData = { ...prev, ...updatedData };
+        AsyncStorage.setItem("@AppLojista:loja", JSON.stringify(newData));
+        return newData;
       });
 
-      const storedLoja = await AsyncStorage.getItem("@AppLojista:loja");
-      return storedLoja ? JSON.parse(storedLoja) : null;
-    } catch (error) {
-      console.error("❌ Erro ao atualizar dados da loja:", error);
+      const stored = await AsyncStorage.getItem("@AppLojista:loja");
+      return stored ? JSON.parse(stored) : null;
+    } catch (err) {
+      console.error("Erro ao atualizar loja na Auth:", err);
       return loja;
     }
   };
@@ -133,9 +149,4 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useAuthLoja = (): AuthLojaContextData => {
-  const context = useContext(AuthLojaContext);
-  if (!context)
-    throw new Error("useAuthLoja deve ser usado dentro de AuthLojaProvider");
-  return context;
-};
+export const useAuthLoja = () => useContext(AuthLojaContext);
