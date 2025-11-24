@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.adriano_marinho.trazailojista",
-      "versionCode": 20,
+      "versionCode": 22,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
