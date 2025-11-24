@@ -1,5 +1,5 @@
 // app/_layout.tsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { Stack, SplashScreen } from "expo-router";
 import { View, Text, ActivityIndicator } from "react-native";
 import { AuthLojaProvider, useAuthLoja } from "../src/api/contexts/AuthLojaContext";
@@ -24,7 +24,7 @@ export default function RootLayout() {
 function RootNavigation() {
   const { loja, loading } = useAuthLoja();
 
-  // ⬇️ IMPORTANTE: ATIVAR AS NOTIFICAÇÕES QUANDO A LOJA ESTÁ LOGADA
+  // 🔥 O ÚNICO LUGAR ONDE DEVE RODAR
   usePushNotifications(loja?.id);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ function RootNavigation() {
 
   if (loading) {
     return (
-      <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
         <Text>Carregando...</Text>
       </View>
@@ -50,4 +50,3 @@ function RootNavigation() {
     </Stack>
   );
 }
-
