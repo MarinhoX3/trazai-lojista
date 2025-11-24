@@ -1,38 +1,35 @@
-import axios from 'axios';
+import axios from "axios";
+import Constants from "expo-constants";
 
-// URL base para ficheiros estáticos (imagens, etc.)
-export const ASSET_BASE_URL = 'https://trazai.shop';
+// Lê os valores definidos em expo.extra no app.json
+const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl;
+const ASSET_BASE_URL = Constants.expoConfig?.extra?.assetBaseUrl;
 
-// Instância do Axios para chamadas da API, que vive dentro do caminho /api
+if (!API_BASE_URL) {
+  console.warn("⚠ API_BASE_URL não encontrado em expo.extra!");
+}
+
+// Instância principal do Axios
 const api = axios.create({
-  baseURL: `${ASSET_BASE_URL}/api` // Resultado: 'https://trazai.shop/api'
+  baseURL: API_BASE_URL, // agora fica: https://trazai.shop/api
 });
 
-// Request interceptor for adding auth token
+// Interceptador de requisição
 api.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
-    // const token = getAuthToken(); // Implement your auth logic
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  },
-)
+  (config) => config,
+  (error) => Promise.reject(error)
+);
 
-// Response interceptor for handling errors
+// Interceptador de resposta
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
-      console.log("Unauthorized access - redirect to login")
+      console.log("Unauthorized access - redirect to login");
     }
-    return Promise.reject(error)
-  },
-)
+    return Promise.reject(error);
+  }
+);
 
+export { ASSET_BASE_URL };
 export default api;
