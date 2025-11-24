@@ -87,6 +87,8 @@ export async function registerForPushNotificationsAsync(id_loja: number) {
 // 2️⃣ HOOK PRINCIPAL — responsável por LISTENERS
 // =============================================================
 export function usePushNotifications(id_loja: number | undefined) {
+  console.log("🟥 usePushNotifications CHAMADO — id_loja =", id_loja);
+
   const [expoPushToken, setExpoPushToken] = useState<string>();
   const [notification, setNotification] = useState<Notifications.Notification>();
 
