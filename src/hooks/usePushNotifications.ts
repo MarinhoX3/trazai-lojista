@@ -87,20 +87,23 @@ export async function registerForPushNotificationsAsync(id_loja: number) {
 // 2️⃣ HOOK PRINCIPAL — responsável por LISTENERS
 // =============================================================
 export function usePushNotifications(id_loja: number | undefined) {
-  console.log("🟥 usePushNotifications CHAMADO — id_loja =", id_loja);
-
   const [expoPushToken, setExpoPushToken] = useState<string>();
   const [notification, setNotification] = useState<Notifications.Notification>();
 
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
-  const registeredId = useRef<number | null>(null); // 🔒 PROTEÇÃO REAL
+  const registeredId = useRef<number | null>(null);
 
   useEffect(() => {
     if (!id_loja) return;
 
-    // 👇 EVITA registrar mais de 1 vez por ID de loja
+    // Evita logs repetidos
+    if (registeredId.current !== id_loja) {
+      console.log("🟥 usePushNotifications — iniciando registro para loja:", id_loja);
+    }
+
+    // Evita registrar mais de uma vez
     if (registeredId.current === id_loja) return;
     registeredId.current = id_loja;
 
@@ -125,8 +128,5 @@ export function usePushNotifications(id_loja: number | undefined) {
     };
   }, [id_loja]);
 
-  return {
-    expoPushToken,
-    notification,
-  };
+  return { expoPushToken, notification };
 }

@@ -4,9 +4,9 @@ import { useAuthLoja } from "../../src/api/contexts/AuthLojaContext";
 import { usePushNotifications } from "../../src/hooks/usePushNotifications";
 
 export default function AppLayout() {
-  const { loja } = useAuthLoja();
+  const { loja, loading } = useAuthLoja();
 
-  // 🔥 Inicializa push + listeners aqui (apenas uma vez)
+  // 🔥 CHAMA DIRETO O HOOK — SEM CONDICIONAL
   usePushNotifications(loja?.id);
 
   return <Slot />;
