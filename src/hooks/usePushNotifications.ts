@@ -65,7 +65,7 @@ export async function registerForPushNotificationsAsync(id_loja: number) {
 
   if (token) {
     try {
-      await api.post(`/lojas/${id_loja}/push-token`, { token });
+      await api.put(`/lojas/${id_loja}/push-token`, { push_token: token });
       console.log("✅ Token salvo com sucesso no backend.");
     } catch (error) {
       console.error("❌ Erro ao enviar token ao backend:", error);
