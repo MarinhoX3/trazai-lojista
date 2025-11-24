@@ -1,17 +1,18 @@
 import axios from "axios";
 import Constants from "expo-constants";
 
-// Lê os valores definidos em expo.extra no app.json
+// Valores vindos do app.json → expo.extra
 const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl;
 const ASSET_BASE_URL = Constants.expoConfig?.extra?.assetBaseUrl;
 
+// Segurança: alerta caso falte algo
 if (!API_BASE_URL) {
-  console.warn("⚠ API_BASE_URL não encontrado em expo.extra!");
+  console.warn("⚠ API_BASE_URL não encontrado em expo.extra! Usando fallback padrão.");
 }
 
 // Instância principal do Axios
 const api = axios.create({
-  baseURL: API_BASE_URL, // agora fica: https://trazai.shop/api
+  baseURL: API_BASE_URL ?? "https://trazai.shop/api", 
 });
 
 // Interceptador de requisição
