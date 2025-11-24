@@ -1,3 +1,5 @@
+// src/api/contexts/AuthLojaContext.tsx
+
 import React, {
   createContext,
   useState,

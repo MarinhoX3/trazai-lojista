@@ -24,6 +24,8 @@ export default function RootLayout() {
 function RootNavigation() {
   const { loja, loading } = useAuthLoja();
 
+  // ⬇️ IMPORTANTE: ATIVAR AS NOTIFICAÇÕES QUANDO A LOJA ESTÁ LOGADA
+  usePushNotifications(loja?.id);
 
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
@@ -48,3 +50,4 @@ function RootNavigation() {
     </Stack>
   );
 }
+
