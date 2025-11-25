@@ -1,11 +1,12 @@
 // app/_layout.tsx
 import React, { useEffect } from "react";
 import { Stack, SplashScreen } from "expo-router";
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator, Platform } from "react-native";
 import { AuthLojaProvider, useAuthLoja } from "../src/api/contexts/AuthLojaContext";
 import { PedidosAtivosProvider } from "../src/api/contexts/PedidosAtivosContext";
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { usePushNotifications } from "../src/hooks/usePushNotifications";
+import * as Notifications from "expo-notifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,7 +25,19 @@ export default function RootLayout() {
 function RootNavigation() {
   const { loja, loading } = useAuthLoja();
 
-  // 🔥 O ÚNICO LUGAR ONDE DEVE RODAR
+  // 🔥 CRIA O CANAL DE NOTIFICAÇÃO ANTES DE CHAMAR O HOOK
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#FF231F7C",
+      });
+    }
+  }, []);
+
+  // 🔥 Agora o hook pode rodar SEM PROBLEMAS
   usePushNotifications(loja?.id);
 
   useEffect(() => {
