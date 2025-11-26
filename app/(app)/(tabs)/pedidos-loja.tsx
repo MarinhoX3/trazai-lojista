@@ -8,6 +8,8 @@ import { useAuthLoja } from '../../../src/api/contexts/AuthLojaContext';
 import { Ionicons } from '@expo/vector-icons';
 import { usePedidosAtivos } from '../../../src/api/contexts/PedidosAtivosContext'; // Importe o hook do contexto de pedidos ativos
 
+
+
 // Interface para definir o formato de um Pedido com todos os detalhes
 interface Pedido {
   id: number;
@@ -46,6 +48,8 @@ export default function PedidosLojaScreen() {
       setLoading(false);
     }
   }, [loja?.id]);
+
+  
 
   // Use useFocusEffect para buscar pedidos sempre que a tela estiver em foco
   useFocusEffect(
@@ -114,6 +118,22 @@ export default function PedidosLojaScreen() {
                         <Text style={styles.actionButtonText}>Mover para "{proximoStatus}"</Text>
                     </Pressable>
                 )}
+
+                {/* 🔴 Botão de cancelar pedido — AGORA APARECE NO CARD */}
+    {item.status !== "Finalizado" && item.status !== "Cancelado" && (
+        <Pressable 
+            style={[styles.actionButton, { backgroundColor: "#dc3545" }]}
+            onPress={() => router.push({
+    pathname: "/detalhes-pedido",
+    params: { id_pedido: item.id.toString(), cancelar: "1" }
+})}
+
+        >
+            <Ionicons name="close-circle-outline" size={18} color="#fff" />
+            <Text style={styles.actionButtonText}>Cancelar Pedido</Text>
+        </Pressable>
+    )}
+
                 {/* Botão de Impressão */}
                 <Pressable 
                     style={[styles.actionButton, styles.printButton]} 
@@ -146,11 +166,25 @@ export default function PedidosLojaScreen() {
       ) : (
         <FlatList
           data={pedidos}
-          renderItem={renderItem}
+          renderItem={renderItem}        
           keyExtractor={(item) => item.id.toString()}
           style={styles.lista}
           ListHeaderComponent={<Text style={styles.titulo}>Gerir Pedidos Ativos</Text>}
-          ListEmptyComponent={<Text style={styles.textoVazio}>Nenhum pedido ativo no momento.</Text>}
+ListEmptyComponent={
+  <View style={styles.emptyContainer}>
+    <Text style={styles.textoVazio}>Nenhum pedido ativo no momento.</Text>
+
+    <Pressable
+      style={[styles.emptyButton]}
+      onPress={() => router.push('/historico-pedidos')}
+    >
+      <Ionicons name="archive-outline" size={18} color="#fff" />
+      <Text style={styles.emptyButtonText}>Ver histórico de pedidos</Text>
+    </Pressable>
+  </View>
+}
+
+
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
@@ -248,5 +282,30 @@ const styles = StyleSheet.create({
         marginTop: 50,
         fontSize: 16,
         color: 'gray',
-    }
+    },
+    emptyContainer: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginTop: 40,
+  paddingHorizontal: 20,
+},
+
+emptyButton: {
+  marginTop: 16,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 8,
+  backgroundColor: '#007BFF',
+},
+
+emptyButtonText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 15,
+  marginLeft: 8,
+},
 });
+

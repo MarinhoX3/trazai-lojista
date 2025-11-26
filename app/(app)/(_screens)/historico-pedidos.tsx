@@ -17,6 +17,8 @@ import { Stack } from "expo-router"
 import api from "../../../src/api/api"
 import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext"
 import { Ionicons } from "@expo/vector-icons"
+import { useFocusEffect } from '@react-navigation/native';
+
 
 interface HistoricoItem {
   id: number
@@ -24,6 +26,7 @@ interface HistoricoItem {
   valor_total: string
   status: string
   nome_cliente: string
+  motivo_cancelamento?: string
 }
 
 const CustomDatePicker = ({
@@ -156,6 +159,7 @@ export default function HistoricoPedidosScreen() {
 
   const buscarHistoricoFiltrado = useCallback(async () => {
     if (!loja?.id) return
+    
 
     setLoading(true)
     try {
@@ -181,37 +185,56 @@ export default function HistoricoPedidosScreen() {
     }
   }, [loja?.id, dataInicio, dataFim])
 
+  useFocusEffect(
+    useCallback(() => {
+      buscarHistoricoFiltrado();
+    }, [buscarHistoricoFiltrado])
+  );
+  
   const renderItem = ({ item }: { item: HistoricoItem }) => (
-    <View style={[styles.pedidoCard, item.status === "Cancelado" && styles.cardCancelado]}>
-      <View style={styles.cardHeader}>
-        <View style={styles.clienteInfo}>
-          <Ionicons name="person-circle-outline" size={20} color="#666" />
-          <Text style={styles.clienteNome}>{item.nome_cliente}</Text>
-        </View>
-        <View
-          style={[styles.statusBadge, item.status === "Cancelado" ? styles.statusCancelado : styles.statusFinalizado]}
-        >
-          <Text style={styles.statusText}>{item.status}</Text>
-        </View>
+  <View style={[styles.pedidoCard, item.status === "Cancelado" && styles.cardCancelado]}>
+    <View style={styles.cardHeader}>
+      <View style={styles.clienteInfo}>
+        <Ionicons name="person-circle-outline" size={20} color="#666" />
+        <Text style={styles.clienteNome}>{item.nome_cliente}</Text>
       </View>
-
-      <View style={styles.cardDivider} />
-
-      <View style={styles.cardDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>
-            {new Date(item.data_hora).toLocaleDateString("pt-BR")} às{" "}
-            {new Date(item.data_hora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="cash-outline" size={16} color="#666" />
-          <Text style={styles.valorTotal}>R$ {Number.parseFloat(item.valor_total).toFixed(2)}</Text>
-        </View>
+      <View
+        style={[styles.statusBadge, item.status === "Cancelado" ? styles.statusCancelado : styles.statusFinalizado]}
+      >
+        <Text style={styles.statusText}>{item.status}</Text>
       </View>
     </View>
-  )
+
+    <View style={styles.cardDivider} />
+
+    <View style={styles.cardDetails}>
+      <View style={styles.detailRow}>
+        <Ionicons name="calendar-outline" size={16} color="#666" />
+        <Text style={styles.detailText}>
+          {new Date(item.data_hora).toLocaleDateString("pt-BR")} às{" "}
+          {new Date(item.data_hora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+        </Text>
+      </View>
+
+      <View style={styles.detailRow}>
+        <Ionicons name="cash-outline" size={16} color="#666" />
+        <Text style={styles.valorTotal}>R$ {Number.parseFloat(item.valor_total).toFixed(2)}</Text>
+      </View>
+
+      {/* MOSTRAR MOTIVO DO CANCELAMENTO */}
+      {item.status === "Cancelado" && item.motivo_cancelamento && (
+        <View style={styles.cancelReasonContainer}>
+          <Ionicons name="alert-circle-outline" size={16} color="#d32f2f" />
+          <Text style={styles.cancelReasonText}>
+            <Text style={styles.cancelReasonLabel}>Motivo: </Text>
+            {item.motivo_cancelamento}
+          </Text>
+        </View>
+      )}
+    </View>
+  </View>
+)
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -243,6 +266,7 @@ export default function HistoricoPedidosScreen() {
           <Text style={styles.filterButtonText}>Filtrar Pedidos</Text>
         </TouchableOpacity>
       </View>
+      
 
       <CustomDatePicker
         visible={showPickerInicio}
@@ -523,4 +547,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+    cancelReasonContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  cancelReasonLabel: {
+    fontWeight: "bold",
+    color: "#d32f2f",
+  },
+  cancelReasonText: {
+    fontSize: 14,
+    color: "#b71c1c",
+    flex: 1,
+    flexWrap: "wrap",
+  },
+
 })
