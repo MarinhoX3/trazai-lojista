@@ -1,6 +1,6 @@
 "use client"
-
-import { useState } from "react"
+import { Appearance } from "react-native";
+import { useState, useEffect } from "react"   // ← IMPORTAR useEffect
 import {
   View,
   Text,
@@ -22,6 +22,11 @@ import * as ImagePicker from "expo-image-picker"
 import { productCategoriesForForms } from "../../../src/constants/categories"
 
 export default function CreateProductScreen() {
+
+    useEffect(() => {
+    Appearance.setColorScheme("light")
+  }, [])
+
   const router = useRouter()
   const { lojaId } = useLocalSearchParams()
 
