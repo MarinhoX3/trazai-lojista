@@ -138,9 +138,11 @@ function Financeiro() {
                 lojaResponse.data.taxa_entrega || 0
             );
             setTaxaEntrega(taxaEntregaValue.toFixed(2).replace(".", ","));
-        } catch (err) {
-            Alert.alert("Erro", "Não foi possível carregar os dados financeiros.");
-        }
+} catch (err: any) {
+    console.log("❌ ERRO AO BUSCAR FINANCEIRO:", err?.response?.data || err);
+    Alert.alert("Erro", JSON.stringify(err?.response?.data || err));
+}
+
 
         setLoading(false);
     }, [loja?.id]);
@@ -162,57 +164,73 @@ function Financeiro() {
     };
 
     const handlePayment = async () => {
-        if (totalComissao <= 0 || !loja?.id) {
-            Alert.alert("Aviso", "Não há comissão pendente.");
+    if (totalComissao <= 0 || !loja?.id) {
+        Alert.alert("Aviso", "Não há comissão pendente.");
+        return;
+    }
+
+    setPaymentLoading(true);
+
+    try {
+        const response = await api.post("/checkout/create-payment-intent-comissao", {
+            amount: Math.round(totalComissao * 100),
+            loja_id: loja.id,
+        });
+
+        const { paymentIntent, ephemeralKey, customer } = response.data;
+
+        const { error: initError } = await stripe.initPaymentSheet({
+            merchantDisplayName: "TrazAí Plataforma",
+            customerId: customer,
+            customerEphemeralKeySecret: ephemeralKey,
+            paymentIntentClientSecret: paymentIntent,
+        });
+
+        if (initError) {
+            Alert.alert("Erro", initError.message);
             return;
         }
 
-        setPaymentLoading(true);
-        try {
-            const response = await api.post("/payments/create-payment-intent", {
-                amount: totalComissao,
-                lojaId: loja.id,
-            });
+        const { error: presentError } = await stripe.presentPaymentSheet();
 
-            const { clientSecret } = response.data;
-            if (!clientSecret) throw new Error("clientSecret ausente.");
-
-            const { error: initError } = await stripe.initPaymentSheet({
-                merchantDisplayName: "TrazAí Plataforma",
-                paymentIntentClientSecret: clientSecret,
-            });
-
-            if (initError) {
-                Alert.alert("Erro", initError.message);
-                return;
-            }
-
-            const { error: presentError } =
-                await stripe.presentPaymentSheet();
-
-            if (presentError) {
-                Alert.alert(
-                    "Atenção",
-                    presentError.message.includes("Canceled")
-                        ? "Pagamento cancelado."
-                        : presentError.message
-                );
-                return;
-            }
-
-            await api.post("/payments/confirmar-pagamento", {
-                lojaId: loja.id,
-                paymentIntentId: clientSecret.split("_secret")[0],
-            });
-
-            Alert.alert("Sucesso!", "Comissão paga com sucesso.");
-            fetchDadosFinanceiros();
-        } catch (err) {
-            Alert.alert("Erro", "Falha ao processar pagamento.");
+        if (presentError) {
+            Alert.alert(
+                "Atenção",
+                presentError.message.includes("Canceled")
+                    ? "Pagamento cancelado."
+                    : presentError.message
+            );
+            return;
         }
 
-        setPaymentLoading(false);
-    };
+        Alert.alert("Sucesso!", "Comissão paga com sucesso.");
+  // Caso 1: paymentIntent seja string ("pi_xyz_secret_abc")
+let paymentIntentId = paymentIntent;
+
+// Caso 2: pagamentoIntent seja objeto ({ id: "pi_xyz", client_secret: "..." })
+if (typeof paymentIntent === "object" && paymentIntent.id) {
+    paymentIntentId = paymentIntent.id;
+}
+
+// Extrair caso seja client_secret
+if (typeof paymentIntentId === "string" && paymentIntentId.includes("_secret")) {
+    paymentIntentId = paymentIntentId.split("_secret")[0];
+}
+
+
+await api.post("/payments/confirmar-pagamento-comissao", {
+    loja_id: loja.id,
+    paymentIntentId
+});
+
+        fetchDadosFinanceiros();
+    } catch (err) {
+        Alert.alert("Erro", "Falha ao processar pagamento.");
+    }
+
+    setPaymentLoading(false);
+};
+
 
     const handleSaveDeliveryFee = async () => {
         if (!loja?.id) {

@@ -1,3 +1,5 @@
+// app/(app)/(screens)/checkout.tsx
+
 import React, { useState, useEffect } from 'react';
 import { View, Alert, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useStripe } from '@stripe/stripe-react-native';
@@ -11,26 +13,25 @@ const CheckoutScreen = () => {
   const params = useLocalSearchParams();
   const totalComissao = Number(params.totalComissao);
   const lojaId = Number(params.lojaId);
-  const comissaoId = Number(params.comissaoId);
 
   const initializeCheckout = async () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/payments/create-payment-intent', {
-        amount: totalComissao * 100,
-        lojaId: lojaId,
-        comissao_id: comissaoId,
+      // 🚨 ROTA ATUALIZADA
+      const response = await api.post('/checkout/create-payment-intent-comissao', {
+        amount: Math.round(totalComissao * 100),
+        loja_id: lojaId,
       });
 
       const { paymentIntent, ephemeralKey, customer } = response.data;
 
+      // Inicializa PaymentSheet
       const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'Sua Plataforma',
+        merchantDisplayName: 'TrazAí Plataforma',
         customerId: customer,
         customerEphemeralKeySecret: ephemeralKey,
         paymentIntentClientSecret: paymentIntent,
-        allowsDelayedPaymentMethods: true,
       });
 
       if (initError) {
@@ -38,29 +39,29 @@ const CheckoutScreen = () => {
         return;
       }
 
+      // Abre PaymentSheet
       const { error: presentError } = await presentPaymentSheet();
 
       if (presentError) {
         Alert.alert('Pagamento cancelado', presentError.message);
-        router.push('./pagamento-comissao-cancelado'); // rota relativa
+        router.push('./pagamento-comissao-cancelado');
       } else {
-        
-        router.push('./pagamento-comissao-sucesso'); // rota relativa
+        router.push('./pagamento-comissao-sucesso');
       }
     } catch (error) {
       console.error('Erro ao iniciar o checkout:', error);
       Alert.alert('Erro', 'Não foi possível iniciar o pagamento.');
-      router.push('./pagamento-comissao-cancelado'); // fallback
+      router.push('./pagamento-comissao-cancelado');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (totalComissao > 0 && lojaId && comissaoId) {
+    if (totalComissao > 0 && lojaId) {
       initializeCheckout();
     }
-  }, [totalComissao, lojaId, comissaoId]);
+  }, [totalComissao, lojaId]);
 
   return (
     <View style={styles.container}>
