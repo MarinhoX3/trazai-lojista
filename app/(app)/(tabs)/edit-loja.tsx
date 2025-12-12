@@ -8,7 +8,7 @@ import {
   Button,
   StyleSheet,
   Alert,
-  SafeAreaView,
+  SafeAreaView, // Mantido no import para o Platform.OS
   ActivityIndicator,
   Image,
   Pressable,
@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   Modal,
   Switch,
+  StatusBar, // Adicionado
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -69,6 +70,24 @@ export default function EditLojaScreen() {
   const [waAtivo, setWaAtivo] = useState(true);
   const [savingWa, setSavingWa] = useState(false);
   const [originalWaNumero, setOriginalWaNumero] = useState(''); 
+
+  // =======================================================
+  // FUNÇÕES AUXILIARES
+  // =======================================================
+
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const HeaderBar = ({ title, onBack }: { title: string; onBack: () => void }) => (
+    <View style={styles.headerContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color="#333" />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>{title}</Text>
+    </View>
+  );
 
   // =======================================================
   // EFEITOS (useEffect)
@@ -194,7 +213,7 @@ export default function EditLojaScreen() {
     }
     
     setWaEditing(w); 
-    setWaNumero(displayWaNumero); // Preenche o campo de texto (Ex: 85996574629)
+    setWaNumero(displayWaNumero); 
     setWaNomeVendedor(w.nome_vendedor || ""); 
     setWaDescricao(w.descricao || ""); 
     setWaAtivo(w.ativo === 1); 
@@ -212,7 +231,6 @@ export default function EditLojaScreen() {
     }
 
     // 2. Garante o DDI (55)
-    // Se o número tem 11 dígitos E não começa com 55, adiciona 55.
     if (cleanNumero.length === 11 && !cleanNumero.startsWith('55')) {
       cleanNumero = `55${cleanNumero}`;
     }
@@ -246,10 +264,9 @@ export default function EditLojaScreen() {
       let successMessage = "";
 
       if (waEditing) {
-        // UPDATE: ✅ Corrigido o endpoint para /lojas/whatsapp/{id}
+        // UPDATE: Endpoint corrigido para /lojas/whatsapp/{id}
         const res = await api.put(`/lojas/whatsapp/${waEditing.id}`, payload);
         
-        // Atualiza o estado
         setWhatsapps(prev => prev.map(w => (w.id === waEditing.id ? res.data : w)));
         successMessage = "Contato atualizado com sucesso!";
       } else {
@@ -279,7 +296,7 @@ export default function EditLojaScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            // DELETE: ✅ Corrigido o endpoint para /lojas/whatsapp/{id}
+            // DELETE: Endpoint corrigido para /lojas/whatsapp/{id}
             await api.delete(`/lojas/whatsapp/${id}`);
             setWhatsapps((prev) => prev.filter((w) => w.id !== id));
             Alert.alert("Sucesso", "Contato excluído."); 
@@ -293,7 +310,7 @@ export default function EditLojaScreen() {
 
   const toggleAtivo = async (entry: WhatsappEntry) => {
     try {
-      // PUT Toggle: ✅ Corrigido o endpoint para /lojas/whatsapp/{id}
+      // PUT Toggle: Endpoint corrigido para /lojas/whatsapp/{id}
       const res = await api.put(`/lojas/whatsapp/${entry.id}`, {
         ...entry,
         ativo: entry.ativo ? 0 : 1,
@@ -345,7 +362,11 @@ export default function EditLojaScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      
+      {/* 1. HEADER FIXO (RESOLVE BRIGA COM BARRA DO CELULAR) */}
+      <HeaderBar title="Configurações da Loja" onBack={handleGoBack} /> 
+
       <KeyboardAwareScrollView
         enableOnAndroid
         extraHeight={120}
@@ -565,7 +586,7 @@ export default function EditLojaScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -588,6 +609,35 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
+  
+  /* ========================= HEADER CUSTOM ========================= */
+  headerContainer: {
+    // Altura adaptada para a barra de status do Android e iOS
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 50, 
+    paddingBottom: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    // Usamos padding para centralizar, já que o backButton é posicionado absolutamente
+  },
+  backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 50,
+    left: 15,
+    zIndex: 10,
+    paddingRight: 15,
+  },
+  /* ========================= FIM HEADER CUSTOM ===================== */
+
   imageContainer: {
     alignItems: "center",
     marginBottom: 20,
