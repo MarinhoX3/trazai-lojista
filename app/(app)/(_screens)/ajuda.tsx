@@ -72,7 +72,12 @@ export default function AjudaScreen() {
 
           <View style={styles.bulletPoint}>
             <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
-            <Text style={styles.bulletText}>Pagamentos online seguros via Stripe</Text>
+            <Text style={styles.bulletText}>Pagamentos com cartão descontam comissão automaticamente</Text>
+          </View>
+
+          <View style={styles.bulletPoint}>
+            <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+            <Text style={styles.bulletText}>Pix direto para o lojista (valor cai na hora)</Text>
           </View>
 
           <View style={styles.bulletPoint}>
@@ -87,74 +92,89 @@ export default function AjudaScreen() {
         </View>
 
         {/* PRAZOS */}
-<View style={styles.section}>
-  <View style={styles.sectionHeader}>
-    <Ionicons name="calendar" size={24} color="#DC2626" />
-    <Text style={styles.sectionTitle}>Prazos de Recebimento</Text>
-  </View>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="calendar" size={24} color="#DC2626" />
+            <Text style={styles.sectionTitle}>Prazos de Recebimento</Text>
+          </View>
 
-  <Text style={styles.sectionText}>Veja quando cada valor cai na sua conta Stripe:</Text>
+          <Text style={styles.sectionText}>Veja quando cada valor cai na sua conta:</Text>
 
-  {/* Cartão de Crédito */}
-  <View style={styles.paymentCard}>
-    <View style={styles.paymentHeader}>
-      <Ionicons name="card" size={20} color="#6772E5" />
-      <Text style={styles.paymentMethod}>Cartão de Crédito</Text>
-    </View>
-    <Text style={styles.paymentDays}>D+30</Text>
-    <Text style={styles.paymentDescription}>Prazo padrão antifraude no Brasil.</Text>
-  </View>
+          {/* Cartão de Crédito */}
+          <View style={styles.paymentCard}>
+            <View style={styles.paymentHeader}>
+              <Ionicons name="card" size={20} color="#6772E5" />
+              <Text style={styles.paymentMethod}>Cartão de Crédito</Text>
+            </View>
+            <Text style={styles.paymentDays}>D+30</Text>
+            <Text style={styles.paymentDescription}>Prazo padrão antifraude no Brasil.</Text>
+          </View>
 
-  {/* Cartão de Débito */}
-  <View style={styles.paymentCard}>
-    <View style={styles.paymentHeader}>
-      <Ionicons name="card-outline" size={20} color="#16A34A" />
-      <Text style={styles.paymentMethod}>Cartão de Débito</Text>
-    </View>
-    <Text style={styles.paymentDays}>D+2</Text>
-    <Text style={styles.paymentDescription}>Liquidação entre bancos.</Text>
-  </View>
+          {/* Cartão de Débito */}
+          <View style={styles.paymentCard}>
+            <View style={styles.paymentHeader}>
+              <Ionicons name="card-outline" size={20} color="#16A34A" />
+              <Text style={styles.paymentMethod}>Cartão de Débito</Text>
+            </View>
+            <Text style={styles.paymentDays}>D+2</Text>
+            <Text style={styles.paymentDescription}>Liquidação entre bancos.</Text>
+          </View>
 
-  {/* Pix */}
-  <View style={styles.paymentCard}>
-    <View style={styles.paymentHeader}>
-      <Ionicons name="flash" size={20} color="#0EA5E9" />
-      <Text style={styles.paymentMethod}>Pix via Stripe</Text>
-    </View>
-    <Text style={styles.paymentDays}>D+1</Text>
-    <Text style={styles.paymentDescription}>Rápido e com segurança antifraude.</Text>
-  </View>
+          {/* Pix Direto */}
+          <View style={styles.paymentCard}>
+            <View style={styles.paymentHeader}>
+              <Ionicons name="flash" size={20} color="#0EA5E9" />
+              <Text style={styles.paymentMethod}>Pix Direto para o Lojista</Text>
+            </View>
 
-{/* Dinheiro */}
-<View style={styles.paymentCard}>
-  <View style={styles.paymentHeader}>
-    <Ionicons name="cash-outline" size={20} color="#16A34A" />
-    <Text style={styles.paymentMethod}>Dinheiro (Pagamento na Entrega)</Text>
-  </View>
+            <Text style={[styles.paymentDays, { color: "#16A34A" }]}>Imediato</Text>
 
-  <Text style={[styles.paymentDays, { color: "#16A34A" }]}>Imediato</Text>
+            <Text style={styles.paymentDescription}>
+              O pagamento cai diretamente na chave Pix cadastrada pela loja.
+            </Text>
+            <View style={{ marginTop: 6 }}>
+              <Text style={[styles.paymentDescription, { fontWeight: "600" }]}>
+                🔎 Comissão conforme o plano da loja:
+              </Text>
 
-  <Text style={styles.paymentDescription}>
-    Você recebe o valor diretamente do cliente no momento da entrega.
-  </Text>
+              <Text style={styles.paymentDescription}>• Plano Novo → 5%</Text>
+              <Text style={styles.paymentDescription}>• Plano Ativo → 8%</Text>
+              <Text style={styles.paymentDescription}>• Plano Destaque → 10%</Text>
+            </View>
 
-  <View style={{ marginTop: 6 }}>
-    <Text style={[styles.paymentDescription, { fontWeight: "600" }]}>
-      🔎 Comissão conforme o plano da loja:
-    </Text>
+            <Text style={[styles.paymentDescription, { color: "#DC2626", marginTop: 6 }]}>
+              ⚠️ Comissão gerada no app — deve ser paga depois na área "Financeiro".
+            </Text>
+          </View>
 
-    <Text style={styles.paymentDescription}>• Plano Novo → 5%</Text>
-    <Text style={styles.paymentDescription}>• Plano Ativo → 8%</Text>
-    <Text style={styles.paymentDescription}>• Plano Destaque → 10%</Text>
-  </View>
+          {/* Dinheiro */}
+          <View style={styles.paymentCard}>
+            <View style={styles.paymentHeader}>
+              <Ionicons name="cash-outline" size={20} color="#16A34A" />
+              <Text style={styles.paymentMethod}>Dinheiro (Pagamento na Entrega)</Text>
+            </View>
 
-  <Text style={[styles.paymentDescription, { color: "#DC2626", marginTop: 6 }]}>
-    ⚠️ O valor da comissão é gerado no app e deve ser pago depois na área "Financeiro".
-  </Text>
-</View>
+            <Text style={[styles.paymentDays, { color: "#16A34A" }]}>Imediato</Text>
 
+            <Text style={styles.paymentDescription}>
+              Você recebe o valor diretamente do cliente no momento da entrega.
+            </Text>
 
-</View>
+            <View style={{ marginTop: 6 }}>
+              <Text style={[styles.paymentDescription, { fontWeight: "600" }]}>
+                🔎 Comissão conforme o plano da loja:
+              </Text>
+
+              <Text style={styles.paymentDescription}>• Plano Novo → 5%</Text>
+              <Text style={styles.paymentDescription}>• Plano Ativo → 8%</Text>
+              <Text style={styles.paymentDescription}>• Plano Destaque → 10%</Text>
+            </View>
+
+            <Text style={[styles.paymentDescription, { color: "#DC2626", marginTop: 6 }]}>
+              ⚠️ Comissão gerada no app — deve ser paga depois na área "Financeiro".
+            </Text>
+          </View>
+        </View>
 
         {/* COMISSÕES */}
         <View style={styles.section}>
@@ -168,11 +188,15 @@ export default function AjudaScreen() {
           </Text>
 
           <Text style={styles.sectionText}>
-            🔸 <Text style={styles.bold}>Cartão ou Pix:</Text> comissão automática, descontada no pagamento.
+            🔸 <Text style={styles.bold}>Cartão:</Text> comissão automática, descontada no pagamento.
           </Text>
 
           <Text style={styles.sectionText}>
-            🔸 <Text style={styles.bold}>Dinheiro:</Text> comissão é gerada e deve ser paga manualmente na aba Financeiro.
+            🔸 <Text style={styles.bold}>Pix:</Text> recebimento direto. A comissão é gerada manualmente no app.
+          </Text>
+
+          <Text style={styles.sectionText}>
+            🔸 <Text style={styles.bold}>Dinheiro:</Text> comissão manual, paga também na aba Financeiro.
           </Text>
 
           <Text style={styles.sectionText}>
@@ -194,7 +218,6 @@ export default function AjudaScreen() {
 
           {/* Timeline */}
           <View style={styles.timelineContainer}>
-
             <View style={styles.timelineStep}>
               <View style={styles.timelineDot} />
               <View style={styles.timelineContent}>
@@ -222,12 +245,11 @@ export default function AjudaScreen() {
                 <Text style={styles.timelineDescription}>A partir do dia 91+</Text>
               </View>
             </View>
-
           </View>
 
           <Text style={[styles.sectionText, { marginTop: 15 }]}>
-            Esses percentuais valem apenas para pedidos em dinheiro.
-            Cartão e Pix já descontam tudo automaticamente.
+            Esses percentuais valem para pedidos pagos em dinheiro ou Pix direto.
+            No cartão, a comissão é descontada automaticamente.
           </Text>
         </View>
 
@@ -316,15 +338,8 @@ const styles = StyleSheet.create({
   supportButtonText: { fontSize: 16, fontWeight: "600", color: "#fff", marginLeft: 8 },
 
   /* TIMELINE */
-  timelineContainer: {
-    marginTop: 10,
-    paddingLeft: 10,
-  },
-  timelineStep: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
+  timelineContainer: { marginTop: 10, paddingLeft: 10 },
+  timelineStep: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   timelineDot: {
     width: 14,
     height: 14,
@@ -343,4 +358,3 @@ const styles = StyleSheet.create({
   timelineTitle: { fontSize: 16, fontWeight: "600", color: "#1F2937" },
   timelineDescription: { fontSize: 14, color: "#6B7280" },
 });
-

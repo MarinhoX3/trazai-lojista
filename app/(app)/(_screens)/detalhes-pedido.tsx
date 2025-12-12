@@ -16,7 +16,6 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import api from "../../../src/api/api";
 import { Ionicons } from "@expo/vector-icons";
 
-// Interfaces para os detalhes completos do pedido
 interface ItemDoPedido {
   quantidade: number;
   preco_unitario_congelado: string;
@@ -32,15 +31,13 @@ interface PedidoDetalhes {
   nome_cliente: string;
   telefone_cliente: string;
   forma_pagamento: string;
-  motivo_cancelamento?: string; // NOVO
-  cancelado_por?: string;       // NOVO
+  motivo_cancelamento?: string;
+  cancelado_por?: string;
   itens: ItemDoPedido[];
 }
 
 export default function DetalhesPedidoScreen() {
   const router = useRouter();
-
-  // 👇 AGORA LEMOS TAMBÉM O PARÂMETRO "cancelar"
   const { id_pedido, cancelar } = useLocalSearchParams<{
     id_pedido?: string;
     cancelar?: string;
@@ -49,7 +46,6 @@ export default function DetalhesPedidoScreen() {
   const [pedido, setPedido] = useState<PedidoDetalhes | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Cancelamento profissional
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
 
@@ -61,7 +57,6 @@ export default function DetalhesPedidoScreen() {
     "Outro motivo",
   ];
 
-  // Busca os detalhes completos do pedido no backend
   const buscarDetalhes = useCallback(async () => {
     if (!id_pedido) return;
     try {
@@ -80,7 +75,6 @@ export default function DetalhesPedidoScreen() {
     buscarDetalhes();
   }, [buscarDetalhes]);
 
-  // Quando vier de pedidos-loja com ?cancelar=1, ABRE o modal automaticamente
   useEffect(() => {
     if (
       cancelar === "1" &&
@@ -92,14 +86,12 @@ export default function DetalhesPedidoScreen() {
     }
   }, [cancelar, pedido]);
 
-  // Função para ATUALIZAR O STATUS (fluxo normal)
   const handleAtualizarStatus = async (novoStatus: string) => {
     if (!pedido) return;
     try {
       await api.put(`/pedidos/${pedido.id}/status`, { status: novoStatus });
       Alert.alert("Sucesso!", `O pedido foi marcado como "${novoStatus}".`);
 
-      // Atualiza o status localmente
       setPedido((pedidoAtual) =>
         pedidoAtual ? { ...pedidoAtual, status: novoStatus } : null
       );
@@ -113,7 +105,6 @@ export default function DetalhesPedidoScreen() {
     }
   };
 
-  // Função para CANCELAR com motivo (profissional)
   const confirmarCancelamento = async () => {
     if (!pedido) return;
     if (!motivoCancelamento) {
@@ -149,13 +140,14 @@ export default function DetalhesPedidoScreen() {
     }
   };
 
-  // NOVO: Funções interativas para ligar e abrir mapa
+  // Ligar para cliente
   const ligarParaCliente = () => {
     if (pedido?.telefone_cliente) {
       Linking.openURL(`tel:${pedido.telefone_cliente}`);
     }
   };
 
+  // Abrir endereço no mapa
   const abrirNoMapa = () => {
     if (pedido?.endereco_entrega) {
       const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -163,6 +155,23 @@ export default function DetalhesPedidoScreen() {
       )}`;
       Linking.openURL(url);
     }
+  };
+
+  // WhatsApp — NOVO
+  const conversarWhatsApp = () => {
+    if (!pedido?.telefone_cliente) {
+      Alert.alert("Erro", "Número do cliente indisponível.");
+      return;
+    }
+
+    const phone = pedido.telefone_cliente;
+    const message = `Olá ${pedido.nome_cliente}! Estou entrando em contato sobre o pedido #${pedido.id} do TRAZAÍ.`;
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Erro", "Não foi possível abrir o WhatsApp.");
+    });
   };
 
   if (loading) {
@@ -183,7 +192,6 @@ export default function DetalhesPedidoScreen() {
 
   const cancelado = pedido.status === "Cancelado";
 
-  // Helper para exibir "Lojista" / "Cliente" / outro texto
   const labelCanceladoPor = (valor?: string) => {
     if (!valor) return "Desconhecido";
     if (valor.toLowerCase() === "lojista") return "Lojista";
@@ -194,19 +202,19 @@ export default function DetalhesPedidoScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ title: `Detalhes do Pedido #${pedido.id}` }} />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Seção de Dados do Cliente */}
+
+        {/* Dados do Cliente */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Dados do Cliente</Text>
+
           <View style={styles.detailRow}>
             <Ionicons name="person-outline" size={18} color="#555" />
             <Text style={styles.detailText}>{pedido.nome_cliente}</Text>
           </View>
 
-          <TouchableOpacity
-            onPress={ligarParaCliente}
-            style={styles.detailRow}
-          >
+          <TouchableOpacity onPress={ligarParaCliente} style={styles.detailRow}>
             <Ionicons name="call-outline" size={18} color="#007BFF" />
             <Text style={[styles.detailText, styles.linkText]}>
               {pedido.telefone_cliente}
@@ -228,9 +236,10 @@ export default function DetalhesPedidoScreen() {
           </View>
         </View>
 
-        {/* Seção de Itens do Pedido */}
+        {/* Itens do Pedido */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Itens do Pedido</Text>
+
           {pedido.itens.map((item, index) => (
             <View key={index} style={styles.itemRow}>
               <Text style={styles.itemQty}>
@@ -244,7 +253,7 @@ export default function DetalhesPedidoScreen() {
           ))}
         </View>
 
-        {/* Seção do Total */}
+        {/* Total */}
         <View style={styles.totalContainer}>
           <Text style={styles.totalLabel}>Total do Pedido:</Text>
           <Text style={styles.totalValue}>
@@ -252,17 +261,13 @@ export default function DetalhesPedidoScreen() {
           </Text>
         </View>
 
-        {/* Seção Profissional de Cancelamento */}
+        {/* Cancelamento */}
         {cancelado && (
           <View style={[styles.section, styles.cancelSection]}>
             <Text style={styles.sectionTitle}>Informações de Cancelamento</Text>
 
             <View style={styles.detailRow}>
-              <Ionicons
-                name="close-circle-outline"
-                size={20}
-                color="#dc3545"
-              />
+              <Ionicons name="close-circle-outline" size={20} color="#dc3545" />
               <Text style={[styles.detailText, styles.cancelStatusText]}>
                 Este pedido foi cancelado.
               </Text>
@@ -279,11 +284,7 @@ export default function DetalhesPedidoScreen() {
 
             {pedido.motivo_cancelamento && (
               <View style={styles.detailRow}>
-                <Ionicons
-                  name="alert-circle-outline"
-                  size={18}
-                  color="#555"
-                />
+                <Ionicons name="alert-circle-outline" size={18} color="#555" />
                 <Text style={styles.detailText}>
                   Motivo: {pedido.motivo_cancelamento}
                 </Text>
@@ -292,16 +293,28 @@ export default function DetalhesPedidoScreen() {
           </View>
         )}
 
-        {/* Seção de Ações */}
+        {/* GERIR PEDIDO */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gerir Pedido</Text>
+
           <View style={styles.statusContainer}>
             <Text style={styles.pedidoStatus}>
               Status Atual: {pedido.status}
             </Text>
           </View>
 
-          {/* Botões de Ação Condicionais */}
+          {/* WhatsApp - NOVO */}
+          <TouchableOpacity
+            style={styles.whatsappButton}
+            onPress={conversarWhatsApp}
+          >
+            <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+            <Text style={styles.whatsappButtonText}>
+              Conversar com o Cliente
+            </Text>
+          </TouchableOpacity>
+
+          {/* Ações de status */}
           {!cancelado && pedido.status === "Recebido" && (
             <Pressable
               style={styles.actionButton}
@@ -333,7 +346,7 @@ export default function DetalhesPedidoScreen() {
             </Pressable>
           )}
 
-          {/* Botão de Cancelar (aparece se o pedido não estiver finalizado/cancelado) */}
+          {/* Cancelar */}
           {pedido.status !== "Finalizado" && !cancelado && (
             <Pressable
               style={[styles.actionButton, styles.cancelarButton]}
@@ -345,7 +358,7 @@ export default function DetalhesPedidoScreen() {
         </View>
       </ScrollView>
 
-      {/* MODAL DE CANCELAMENTO PROFISSIONAL */}
+      {/* Modal */}
       <Modal visible={showCancelModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -411,19 +424,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
     paddingBottom: 10,
   },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  detailText: {
-    fontSize: 16,
-    marginLeft: 10,
-    flex: 1,
-  },
-  linkText: {
-    color: "#007BFF",
-  },
+  detailRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  detailText: { fontSize: 16, marginLeft: 10, flex: 1 },
+  linkText: { color: "#007BFF" },
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -431,20 +434,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  itemQty: {
-    fontSize: 16,
-    fontWeight: "bold",
-    flex: 0.15,
-  },
-  itemName: {
-    fontSize: 16,
-    flex: 0.6,
-  },
-  itemPrice: {
-    fontSize: 16,
-    flex: 0.25,
-    textAlign: "right",
-  },
+  itemQty: { fontSize: 16, fontWeight: "bold", flex: 0.15 },
+  itemName: { fontSize: 16, flex: 0.6 },
+  itemPrice: { fontSize: 16, flex: 0.25, textAlign: "right" },
   totalContainer: {
     backgroundColor: "#fff",
     padding: 20,
@@ -455,15 +447,8 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 20,
   },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  totalValue: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#28a745",
-  },
+  totalLabel: { fontSize: 18, fontWeight: "bold" },
+  totalValue: { fontSize: 22, fontWeight: "bold", color: "#28a745" },
   statusContainer: {
     marginBottom: 15,
     paddingVertical: 5,
@@ -477,6 +462,24 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#005a9c",
   },
+
+  /* WHATSAPP BUTTON */
+  whatsappButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#25D366",
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  whatsappButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
+
   actionButton: {
     backgroundColor: "#007BFF",
     padding: 15,
@@ -484,63 +487,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  finalizarButton: {
-    backgroundColor: "#28a745",
-  },
-  cancelarButton: {
-    backgroundColor: "#dc3545",
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  finalizarButton: { backgroundColor: "#28a745" },
+  cancelarButton: { backgroundColor: "#dc3545" },
+  actionButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 
-  // Seção de cancelamento
-  cancelSection: {
-    borderLeftWidth: 4,
-    borderLeftColor: "#dc3545",
-  },
-  cancelStatusText: {
-    color: "#dc3545",
-    fontWeight: "600",
-  },
+  /* Cancelamento */
+  cancelSection: { borderLeftWidth: 4, borderLeftColor: "#dc3545" },
+  cancelStatusText: { color: "#dc3545", fontWeight: "600" },
 
-  // Modal de cancelamento
+  /* Modal */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
-  modalBox: {
-    width: "85%",
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 12,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    marginBottom: 15,
-    color: "#555",
-  },
+  modalBox: { width: "85%", backgroundColor: "#fff", padding: 20, borderRadius: 12 },
+  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
+  modalSubtitle: { fontSize: 16, marginBottom: 15, color: "#555" },
   motivoOption: {
     padding: 12,
     borderRadius: 8,
     backgroundColor: "#f2f2f2",
     marginBottom: 10,
   },
-  motivoOptionSelected: {
-    backgroundColor: "#cfe2ff",
-  },
-  motivoText: {
-    fontSize: 16,
-  },
+  motivoOptionSelected: { backgroundColor: "#cfe2ff" },
+  motivoText: { fontSize: 16 },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -560,13 +532,6 @@ const styles = StyleSheet.create({
     width: "45%",
     alignItems: "center",
   },
-  modalCancelText: {
-    fontSize: 16,
-    color: "#555",
-  },
-  modalConfirmText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "bold",
-  },
+  modalCancelText: { fontSize: 16, color: "#555" },
+  modalConfirmText: { fontSize: 16, color: "#fff", fontWeight: "bold" },
 });
