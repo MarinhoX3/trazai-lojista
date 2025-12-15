@@ -43,35 +43,31 @@ export default function EditProductScreen() {
   const [isSaving, setIsSaving] = useState(false)
 
   // ====================================================================
-  // LIMPA NÚMEROS (ESTOQUE) - AJUSTADA PARA CORRIGIR ERRO DE MILHAR
+  // LIMPA NÚMEROS (ESTOQUE) - LÓGICA DE CORREÇÃO DE MILHAR
   // ====================================================================
   const cleanNumberString = useCallback((value: string | number | null | undefined) => {
     if (value === null || value === undefined) return ""
 
     const valueString = String(value)
-
-    // 1. Remove TUDO que não é dígito (0-9). (Ex: "1.000" vira "1000")
+    // Remove tudo que não é dígito (Ex: "1.000" vira "1000")
     const cleanedDigits = valueString.replace(/[^0-9]/g, "")
 
-    if (!cleanedDigits) return "" // Retorna vazio se não houver dígitos
+    if (!cleanedDigits) return ""
 
     const numericValue = Number.parseInt(cleanedDigits, 10)
 
-    // 2. TRATAMENTO DE MILHAR (Corrige o bug de 1.000 virar 1000):
-    // Se o valor limpo for 4 dígitos ou mais E for divisível por 1000
-    // (ex: 1000, 2000, 5000), assumimos que é um erro de formatação de milhar
-    // vindo do backend e dividimos por 1000.
+    // CORREÇÃO: Se for 1000, 2000, etc., assume que o ponto foi um separador de milhar.
     if (numericValue >= 1000 && numericValue % 1000 === 0) {
         const dividedValue = numericValue / 1000
-        return String(dividedValue) // Retorna "1", "2", "5", etc.
+        return String(dividedValue) 
     }
     
-    // 3. Caso contrário, retorna o valor limpo original (Ex: 125, 999)
+    // Retorna o valor como string de número puro.
     return String(numericValue)
-  }, []) // cleanNumberString é um useCallback agora, embora raramente necessário aqui
+  }, [])
 
   // ====================================================================
-  // CARREGA PRODUTO (Refatorado para useCallback)
+  // CARREGA PRODUTO
   // ====================================================================
   const fetchProduct = useCallback(async () => {
     try {
@@ -82,18 +78,17 @@ export default function EditProductScreen() {
       setDescricao(product.descricao || "")
       setPreco(String(product.preco || ""))
       
-      // Aplica a função de limpeza na inicialização para corrigir o formato do estoque
+      // Aplica a correção de estoque na inicialização
       setEstoque(cleanNumberString(product.estoque)); 
       
       setUnidade(product.unidade_de_venda || "UN")
-      setCategoria(product.categoria || "")
+      setCategoria(product.categoria || "") // Garante que o ID da categoria seja setado
 
       if (product.foto) {
         const timestamp = new Date().getTime()
         // URL Corrigida (sem uploads/uploads/)
         const imgUrl = `https://trazai.shop/${product.foto}?t=${timestamp}`
         setImagemExistente(imgUrl)
-        console.log("IMG URL Puxada do Backend:", imgUrl)
       } else {
         setImagemExistente(null)
       }
@@ -113,7 +108,7 @@ export default function EditProductScreen() {
       fetchProduct()
     }, [fetchProduct])
   )
-
+  
   // ====================================================================
   // SELECIONAR IMAGEM
   // ====================================================================
@@ -125,7 +120,7 @@ export default function EditProductScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // warning ok
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
@@ -137,9 +132,10 @@ export default function EditProductScreen() {
   }
 
   // ====================================================================
-  // SALVAR ALTERAÇÕES (Atualizado para recarregar dados após salvar)
+  // SALVAR ALTERAÇÕES
   // ====================================================================
   const handleUpdate = useCallback(async () => {
+    // Validação também pega o placeholder da categoria
     if (!nome || !preco || !categoria) {
       Alert.alert("Atenção", "Nome, Preço e Categoria são obrigatórios.")
       return
@@ -151,10 +147,7 @@ export default function EditProductScreen() {
       formData.append("nome", nome)
       formData.append("descricao", descricao)
       formData.append("preco", preco.replace(",", "."))
-      
-      // Estoque já está limpo para ser enviado como número puro
       formData.append("estoque", estoque || "0") 
-      
       formData.append("unidade_de_venda", unidade)
       formData.append("categoria", categoria)
 
@@ -173,7 +166,7 @@ export default function EditProductScreen() {
         headers: { "Content-Type": "multipart/form-data" },
       })
 
-      // ATUALIZAÇÃO DE ESTADO PÓS-SALVAR:
+      // Limpa a imagem local e recarrega os dados para exibir a nova imagem
       setNovaImagem(null) 
       await fetchProduct() 
       
@@ -264,7 +257,6 @@ export default function EditProductScreen() {
           <TextInput
             style={styles.input}
             value={estoque}
-            // Aplica a limpeza a cada alteração, garantindo que o estado 'estoque' seja sempre limpo
             onChangeText={(text) => setEstoque(cleanNumberString(text))}
             keyboardType="numeric"
           />
@@ -273,13 +265,25 @@ export default function EditProductScreen() {
           <Text style={styles.label}>Unidade de Venda</Text>
           <TextInput style={styles.input} value={unidade} onChangeText={setUnidade} />
 
-          {/* CATEGORIA */}
+          {/* CATEGORIA - COM AJUSTE DE ESTILO DO PICKER */}
           <Text style={styles.label}>Categoria</Text>
           <View style={styles.pickerContainer}>
-            <Picker selectedValue={categoria} onValueChange={(value) => setCategoria(value)}>
-              {productCategoriesForForms.map((cat) => (
-                <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
-              ))}
+            <Picker 
+              selectedValue={categoria} 
+              onValueChange={(value) => setCategoria(value)}
+              style={styles.picker} 
+            >
+                {/* Placeholder para seleção */}
+                <Picker.Item 
+                  key="placeholder" 
+                  label="Selecione a Categoria" 
+                  value="" 
+                  color="#999" 
+                />
+                
+                {productCategoriesForForms.map((cat) => (
+                  <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+                ))}
             </Picker>
           </View>
 
@@ -318,6 +322,12 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     marginBottom: 15,
+    overflow: 'hidden',
+  },
+  picker: { 
+    height: 50, 
+    width: '100%',
+    color: '#000', 
   },
   imageContainer: { alignItems: "center", marginBottom: 20 },
   productImage: { width: 150, height: 150, borderRadius: 10, backgroundColor: "#eee" },
