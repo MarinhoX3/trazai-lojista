@@ -19,7 +19,7 @@
     "expo-build-properties": "^1.0.9",
     "expo-constants": "~18.0.10",
     "expo-device": "^8.0.9",
-    "expo-image": "~3.0.10",
+    "expo-image": "~3.0.11",
     "expo-image-picker": "17.0.8",
     "expo-linking": "~8.0.8",
     "expo-notifications": "^0.32.12",
@@ -44,6 +44,7 @@
   "devDependencies": {
     "@types/react": "~19.1.10",
     "@types/react-native": "^0.73.0",
+    "expo-module-scripts": "^5.0.8",
     "typescript": "^5"
   },
   "resolutions": {

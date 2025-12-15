@@ -1,27 +1,27 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { Picker } from "@react-native-picker/picker"
+import * as ImagePicker from "expo-image-picker"
+import { Image } from "react-native"
+import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router"
+import { useCallback, useEffect, useState } from "react"
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Button,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
-  Button,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  Image,
-  Pressable,
-  Platform,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  ActivityIndicator,
+  View,
 } from "react-native"
-import { Picker } from "@react-native-picker/picker"
-import { useLocalSearchParams, useRouter, Stack } from "expo-router"
-import api, { ASSET_BASE_URL } from "../../../src/api/api"
-import * as ImagePicker from "expo-image-picker"
-import { productCategoriesForForms } from "../../../src/constants/categories"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import api from "../../../src/api/api"
+import { productCategoriesForForms } from "../../../src/constants/categories"
 
 // ====================================================================
 // COMPONENTE DE EDIÇÃO DE PRODUTO
@@ -30,7 +30,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 export default function EditProductScreen() {
   const { id } = useLocalSearchParams<Record<string, string>>()
   const router = useRouter()
-  const insets = useSafeAreaInsets() // Added safe area insets hook
+  const insets = useSafeAreaInsets()
+
   const [nome, setNome] = useState("")
   const [descricao, setDescricao] = useState("")
   const [preco, setPreco] = useState("")
@@ -38,112 +39,106 @@ export default function EditProductScreen() {
   const [unidade, setUnidade] = useState("UN")
   const [categoria, setCategoria] = useState("")
   const [novaImagem, setNovaImagem] = useState<any>(null)
-  const [imagemExistente, setImagemExistente] = useState("") // Added state to store existing product image URL
+  const [imagemExistente, setImagemExistente] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
+  // ====================================================================
+  // LIMPA NÚMEROS (ESTOQUE) - AJUSTADA PARA CORRIGIR ERRO DE MILHAR
+  // ====================================================================
+  const cleanNumberString = useCallback((value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return ""
 
-    // ====================================================================
-    // FUNÇÃO DE LIMPEZA FINAL OTIMIZADA
-    // Força a conversão para um número inteiro limpo.
-    // ====================================================================
-    const cleanNumberString = (value: string | number | null | undefined) => {
-        if (value === null || value === undefined) return "";
-        
-        let valueString = String(value);
+    const valueString = String(value)
 
-        // 1. Remove TUDO que não é dígito (0-9). (Ex: "90.000" vira "90000")
-        const cleanedDigits = valueString.replace(/[^0-9]/g, "");
+    // 1. Remove TUDO que não é dígito (0-9). (Ex: "1.000" vira "1000")
+    const cleanedDigits = valueString.replace(/[^0-9]/g, "")
 
-        if (!cleanedDigits) return ""; // Retorna vazio se não houver dígitos
+    if (!cleanedDigits) return "" // Retorna vazio se não houver dígitos
 
-        const numericValue = parseInt(cleanedDigits, 10);
+    const numericValue = Number.parseInt(cleanedDigits, 10)
 
-        // 2. TRATAMENTO DO ERRO DE FORMATAÇÃO DO BACKEND:
-        // Se o número for grande (ex: 90000) e for divisível por 1000, 
-        // assume-se que é o erro de formatação de milhar e divide.
-        // Usamos um limite de 1000 para evitar dividir estoques altos corretos.
-        if (numericValue >= 1000 && numericValue % 1000 === 0) {
-             const dividedValue = numericValue / 1000;
-             return String(dividedValue);
-        }
-        
-        // 3. Caso contrário, retorna o valor limpo original
-        return String(numericValue); 
-    };
-
-    // ====================================================================
-    // CARREGAMENTO DOS DADOS (useEffect)
-    // ====================================================================
-  // Dentro do useEffect:
-
-  useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const response = await api.get(`/produtos/${id}`)
-        const product = response.data
-
-        setNome(product.nome)
-        setDescricao(product.descricao)
-        
-        // ... (nome, descricao, preco, etc. inalterados)
-        setPreco(product.preco)
-        
-        // ==========================================================
-        // CORREÇÃO DE FORÇA PARA O ESTOQUE
-        // ==========================================================
-        let estoqueRecebido = String(product.estoque);
-        
-        // 1. Remove qualquer formatação de milhar que venha do backend:
-        // Ex: "20.000" -> "20000"
-        let valorPuro = estoqueRecebido.replace(/[^0-9]/g, "");
-
-        // 2. Se o valor é grande (ex: 20000) e você sabe que o estoque REAL é 20, 
-        // significa que o ponto foi introduzido como separador de milhar.
-        if (valorPuro.length > 3) {
-            // Assume-se que é formatação de milhar e pegamos os dígitos iniciais
-            // Ex: "20000" (se for o caso) ou "20" (se o backend já tiver formatado)
-            
-            // Vamos apenas pegar os dígitos ANTES do ponto, se houver:
-            const partes = estoqueRecebido.split('.');
-            valorPuro = partes[0] || valorPuro; 
-        }
-
-        // 3. Força a ser um número inteiro, garantindo que não há zeros à esquerda desnecessários
-        const estoqueFinal = String(parseInt(valorPuro, 10) || 0);
-        setEstoque(estoqueFinal) // <--- Agora deve ser "20"
-        // ==========================================================
-        
-        setUnidade(product.unidade_de_venda || "UN")
-        setCategoria(product.categoria)
-        // ... (restante do código)
-      } catch (error) {
-        console.error("Error fetching product details:", error)
-      }
+    // 2. TRATAMENTO DE MILHAR (Corrige o bug de 1.000 virar 1000):
+    // Se o valor limpo for 4 dígitos ou mais E for divisível por 1000
+    // (ex: 1000, 2000, 5000), assumimos que é um erro de formatação de milhar
+    // vindo do backend e dividimos por 1000.
+    if (numericValue >= 1000 && numericValue % 1000 === 0) {
+        const dividedValue = numericValue / 1000
+        return String(dividedValue) // Retorna "1", "2", "5", etc.
     }
+    
+    // 3. Caso contrário, retorna o valor limpo original (Ex: 125, 999)
+    return String(numericValue)
+  }, []) // cleanNumberString é um useCallback agora, embora raramente necessário aqui
 
+  // ====================================================================
+  // CARREGA PRODUTO (Refatorado para useCallback)
+  // ====================================================================
+  const fetchProduct = useCallback(async () => {
+    try {
+      const response = await api.get(`/produtos/${id}`)
+      const product = response.data
+
+      setNome(product.nome || "")
+      setDescricao(product.descricao || "")
+      setPreco(String(product.preco || ""))
+      
+      // Aplica a função de limpeza na inicialização para corrigir o formato do estoque
+      setEstoque(cleanNumberString(product.estoque)); 
+      
+      setUnidade(product.unidade_de_venda || "UN")
+      setCategoria(product.categoria || "")
+
+      if (product.foto) {
+        const timestamp = new Date().getTime()
+        // URL Corrigida (sem uploads/uploads/)
+        const imgUrl = `https://trazai.shop/${product.foto}?t=${timestamp}`
+        setImagemExistente(imgUrl)
+        console.log("IMG URL Puxada do Backend:", imgUrl)
+      } else {
+        setImagemExistente(null)
+      }
+    } catch (error) {
+      console.error("Erro ao carregar produto:", error)
+    }
+  }, [id, cleanNumberString])
+
+  // 1. CHAMA fetchProduct no montagem inicial
+  useEffect(() => {
     fetchProduct()
-  }, [id])
+  }, [id, fetchProduct])
 
- 
-  
+  // 2. CHAMA fetchProduct sempre que a tela ganha o foco (retorna)
+  useFocusEffect(
+    useCallback(() => {
+      fetchProduct()
+    }, [fetchProduct])
+  )
 
+  // ====================================================================
+  // SELECIONAR IMAGEM
+  // ====================================================================
   const pickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (permissionResult.granted === false) {
-      Alert.alert("Atenção", "Você precisa permitir o acesso à galeria.")
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permission.granted) {
+      Alert.alert("Atenção", "Você precisa permitir acesso à galeria.")
       return
     }
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // warning ok
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
     })
+
     if (!result.canceled) {
       setNovaImagem(result.assets[0])
     }
   }
 
+  // ====================================================================
+  // SALVAR ALTERAÇÕES (Atualizado para recarregar dados após salvar)
+  // ====================================================================
   const handleUpdate = useCallback(async () => {
     if (!nome || !preco || !categoria) {
       Alert.alert("Atenção", "Nome, Preço e Categoria são obrigatórios.")
@@ -157,156 +152,144 @@ export default function EditProductScreen() {
       formData.append("descricao", descricao)
       formData.append("preco", preco.replace(",", "."))
       
-      // O estoque já está limpo pelo cleanNumberString no estado
-      formData.append("estoque", estoque ? estoque : "0") // Não precisa mais de replace(",", ".")
+      // Estoque já está limpo para ser enviado como número puro
+      formData.append("estoque", estoque || "0") 
       
       formData.append("unidade_de_venda", unidade)
       formData.append("categoria", categoria)
 
       if (novaImagem) {
-        const uri = novaImagem.uri
-        const uriParts = uri.split(".")
-        const fileType = uriParts[uriParts.length - 1]
+        const uri = Platform.OS === "android" ? novaImagem.uri : novaImagem.uri.replace("file://", "")
+        const ext = uri.split(".").pop()
 
         formData.append("foto", {
-          uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
-          name: `photo.${fileType}`,
-          type: `image/${fileType}`,
+          uri,
+          name: `photo.${ext}`,
+          type: `image/${ext}`,
         } as any)
       }
 
       await api.put(`/produtos/${id}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       })
-      Alert.alert("Sucesso", "Produto atualizado com sucesso.", [{ text: "OK", onPress: () => router.back() }])
+
+      // ATUALIZAÇÃO DE ESTADO PÓS-SALVAR:
+      setNovaImagem(null) 
+      await fetchProduct() 
+      
+      Alert.alert("Sucesso", "Produto atualizado com sucesso.", [
+        { 
+          text: "OK", 
+          onPress: () => router.back() 
+        }
+      ])
     } catch (error: any) {
-      console.error("Error updating product:", error.response?.data || error.message)
-      const mensagemErro = error.response?.data?.message || "Não foi possível atualizar o produto."
-      Alert.alert("Erro", mensagemErro)
+      console.error(error)
+      Alert.alert("Erro", "Não foi possível atualizar o produto.")
     } finally {
       setIsSaving(false)
     }
-  }, [id, nome, descricao, preco, estoque, unidade, categoria, novaImagem, router])
+  }, [id, nome, descricao, preco, estoque, unidade, categoria, novaImagem, router, fetchProduct]) 
 
-  const handleDelete = useCallback(async () => {
-    Alert.alert("Confirmar Exclusão", "Tem certeza que deseja deletar este produto?", [
+  // ====================================================================
+  // DELETAR PRODUTO
+  // ====================================================================
+  const handleDelete = useCallback(() => {
+    Alert.alert("Confirmar Exclusão", "Deseja deletar este produto?", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Deletar",
         style: "destructive",
         onPress: async () => {
-          try {
-            await api.delete(`/produtos/${id}`)
-            Alert.alert("Sucesso", "Produto deletado com sucesso.", [{ text: "OK", onPress: () => router.back() }])
-          } catch (error: any) {
-            console.error("Error deleting product:", error.response?.data || error.message)
-            const mensagemErro = error.response?.data?.message || "Não foi possível deletar o produto."
-            Alert.alert("Erro", mensagemErro)
-          }
+          await api.delete(`/produtos/${id}`)
+          router.back()
         },
       },
     ])
   }, [id, router])
 
-  const displayImageUri = novaImagem ? novaImagem.uri : imagemExistente // Updated to use existing image URL instead of just product ID
+  // ====================================================================
+  // IMAGEM A EXIBIR
+  // ====================================================================
+  const displayImageUri = novaImagem?.uri ?? imagemExistente ?? null
 
+  // ====================================================================
+  // RENDER
+  // ====================================================================
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ title: "Editar Produto" }} />
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + 100 },
-          ]}
-        >
+
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}>
           <Text style={styles.titulo}>Editar Produto</Text>
 
+          {/* IMAGEM */}
           <Pressable onPress={pickImage} style={styles.imageContainer}>
-            <Image source={{ uri: displayImageUri }} style={styles.productImage} />
+            {displayImageUri ? (
+              <Image
+                source={{ uri: displayImageUri, cache: "reload" }}
+                style={styles.productImage}
+                resizeMode="cover"
+                onError={(error) => {
+                  console.log("[ERRO_IMG] Falha ao carregar imagem:", error.nativeEvent.error)
+                }}
+                onLoad={() => {
+                  console.log("[INFO_IMG] Imagem carregada com sucesso!")
+                }}
+              />
+            ) : (
+              <View style={[styles.productImage, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: '#aaa' }}>Sem Imagem</Text>
+              </View>
+            )}
+
             <Text style={styles.imagePickerText}>Trocar Imagem</Text>
           </Pressable>
 
+          {/* NOME */}
           <Text style={styles.label}>Nome do Produto</Text>
-          <TextInput
-            style={styles.input}
-            value={nome}
-            onChangeText={setNome}
-            placeholder="Nome do Produto"
-            placeholderTextColor="#888"
-          />
+          <TextInput style={styles.input} value={nome} onChangeText={setNome} />
 
+          {/* DESCRIÇÃO */}
           <Text style={styles.label}>Descrição</Text>
-          <TextInput
-            style={styles.input}
-            value={descricao}
-            onChangeText={setDescricao}
-            multiline
-            placeholder="Descrição do Produto"
-            placeholderTextColor="#888"
-          />
+          <TextInput style={styles.input} value={descricao} onChangeText={setDescricao} multiline />
 
+          {/* PREÇO */}
           <Text style={styles.label}>Preço (R$)</Text>
-          <TextInput
-            style={styles.input}
-            value={preco}
-            onChangeText={setPreco}
-            keyboardType="decimal-pad"
-            placeholder="0,00"
-            placeholderTextColor="#888"
-          />
+          <TextInput style={styles.input} value={preco} onChangeText={setPreco} keyboardType="decimal-pad" />
 
+          {/* ESTOQUE */}
           <Text style={styles.label}>Estoque</Text>
           <TextInput
-    style={styles.input}
-    value={estoque} // <-- Volta a usar apenas o estado 'estoque'
-    // CORREÇÃO: Usamos o `cleanNumberString` no onChangeText
-    onChangeText={(text) => setEstoque(cleanNumberString(text))} 
-    keyboardType="numeric"
-    placeholder="Quantidade em estoque"
-    placeholderTextColor="#888"
-/>
-
-          <Text style={styles.label}>Unidade de Venda</Text>
-          <TextInput
             style={styles.input}
-            value={unidade}
-            onChangeText={setUnidade}
-            placeholder="UN, KG, L, etc"
-            placeholderTextColor="#888"
+            value={estoque}
+            // Aplica a limpeza a cada alteração, garantindo que o estado 'estoque' seja sempre limpo
+            onChangeText={(text) => setEstoque(cleanNumberString(text))}
+            keyboardType="numeric"
           />
 
-          <Text style={styles.label}>Categoria do Produto</Text>
-<View style={styles.pickerContainer}>
-  <Picker
-    selectedValue={categoria}
-    onValueChange={(itemValue) => setCategoria(itemValue as string)}
-    style={styles.picker}
-    dropdownIconColor="#000" // ✅ Ajuste do ícone no Android
-  >
-    {productCategoriesForForms.map((cat) => (
-      <Picker.Item 
-        key={cat.id}
-        label={cat.name}
-        value={cat.id}
-        color="#000" // ✅ Força o texto da opção em preto
-      />
-    ))}
-  </Picker>
-</View>
+          {/* UNIDADE */}
+          <Text style={styles.label}>Unidade de Venda</Text>
+          <TextInput style={styles.input} value={unidade} onChangeText={setUnidade} />
 
-
-          <View style={styles.buttonContainer}>
-            {isSaving ? (
-              <ActivityIndicator size="large" color="#007BFF" />
-            ) : (
-              <Button title="Salvar Alterações" onPress={handleUpdate} />
-            )}
+          {/* CATEGORIA */}
+          <Text style={styles.label}>Categoria</Text>
+          <View style={styles.pickerContainer}>
+            <Picker selectedValue={categoria} onValueChange={(value) => setCategoria(value)}>
+              {productCategoriesForForms.map((cat) => (
+                <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+              ))}
+            </Picker>
           </View>
+
+          {/* BOTÕES */}
           <View style={styles.buttonContainer}>
-            <Button title="Deletar Produto" onPress={handleDelete} color="red" />
+            {isSaving ? <ActivityIndicator /> : <Button title="Salvar Alterações" onPress={handleUpdate} />}
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <Button title="Deletar Produto" color="red" onPress={handleDelete} />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -314,46 +297,30 @@ export default function EditProductScreen() {
   )
 }
 
+// ====================================================================
+// STYLES
+// ====================================================================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: { flexGrow: 1, padding: 20 },
+  scrollContent: { padding: 20 },
   titulo: { fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
   label: { fontSize: 16, fontWeight: "600", marginBottom: 5 },
   input: {
-    height: 50,
-    borderColor: "#ccc",
     borderWidth: 1,
+    borderColor: "#ccc",
     borderRadius: 8,
+    padding: 12,
     marginBottom: 15,
-    paddingHorizontal: 15,
-    fontSize: 16,
     backgroundColor: "#f5f5f5",
   },
   pickerContainer: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
-    backgroundColor: "#f5f5f5",
-    overflow: "hidden",
     marginBottom: 15,
   },
-  picker: {
-    height: 50,
-    width: "100%",
-  },
-  buttonContainer: { marginTop: 10, height: 40, justifyContent: "center" },
   imageContainer: { alignItems: "center", marginBottom: 20 },
-  productImage: { width: 150, height: 150, borderRadius: 10, backgroundColor: "#eee", marginBottom: 10 },
-  imagePickerText: { color: "#007BFF", fontSize: 16, fontWeight: "bold" },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#666",
-  },
+  productImage: { width: 150, height: 150, borderRadius: 10, backgroundColor: "#eee" },
+  imagePickerText: { color: "#007BFF", fontWeight: "bold", marginTop: 8 },
+  buttonContainer: { marginTop: 10 },
 })
