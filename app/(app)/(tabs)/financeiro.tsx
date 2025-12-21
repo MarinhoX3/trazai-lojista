@@ -307,66 +307,31 @@ await api.post("/payments/confirmar-pagamento-comissao", {
                 </Text>
             </View>
 
-            {/* --------------------------- SALDO --------------------------- */}
-            <View style={styles.balanceCard}>
-                <View style={styles.balanceHeader}>
-                    <Ionicons name="trending-up" size={24} color="#4CAF50" />
-                    <Text style={styles.balanceLabel}>
-                        Saldo Total (Disponível + Futuro)
-                    </Text>
-                </View>
+           {/* --------------------------- SALDO --------------------------- */}
+<View style={styles.balanceCard}>
+    <View style={styles.balanceHeader}>
+        <Ionicons name="wallet-outline" size={24} color="#4CAF50" />
+        <Text style={styles.balanceLabel}>
+            Meu Saldo
+        </Text>
+    </View>
 
-                <Text style={styles.balanceValue}>
-                    {formatCurrency(totalSaldo)}
-                </Text>
+    <Text style={styles.balanceValue}>
+        {formatCurrency(totalSaldo)}
+    </Text>
 
-                <View style={styles.transferDetailContainer}>
-                    <View style={styles.detailRow}>
-                        <Ionicons
-                            name="checkmark-circle-outline"
-                            size={16}
-                            color="#2E7D32"
-                        />
-                        <Text style={styles.detailText}>
-                            Disponível: {formatCurrency(saldoDisponivel)}
-                        </Text>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                        <Ionicons
-                            name="time-outline"
-                            size={16}
-                            color="#FFA500"
-                        />
-                        <Text style={styles.detailText}>
-                            A caminho: {formatCurrency(saldoACaminho)}
-                        </Text>
-                    </View>
-                </View>
-
-                <View style={styles.transferInfo}>
-                    <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color="#666"
-                    />
-                    <Text style={styles.transferText}>
-                        Próxima transferência:{" "}
-                        {formatTransferDate(proximaTransferencia)}
-                    </Text>
-                </View>
-
-                <View style={styles.accountInfo}>
-                    <Ionicons
-                        name="business-outline"
-                        size={16}
-                        color="#333"
-                    />
-                    <Text style={styles.accountText}>
-                        Conta: {contaDestino}
-                    </Text>
-                </View>
-            </View>
+    {/* Mantemos apenas a Conta cadastrada conforme solicitado */}
+    <View style={styles.accountInfo}>
+        <Ionicons
+            name="business-outline"
+            size={16}
+            color="#333"
+        />
+        <Text style={styles.accountText}>
+            Conta: {contaDestino}
+        </Text>
+    </View>
+</View>
 
             {/* ----------------------- REPASSES FUTUROS ----------------------- */}
             <View style={styles.repassesSection}>
