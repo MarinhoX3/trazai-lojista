@@ -20,9 +20,12 @@ interface Pedido {
   nome_cliente: string;
   endereco_entrega: string;
   telefone_cliente: string;
-  whatsapp_cliente?: string;  // ← novo campo (opcional para evitar erro se vier null)
+  whatsapp_cliente?: string;
 
+  tipo_entrega: string;        // 👈 novo
+  metodo_pagamento: string;    // 👈 novo
 }
+
 
 const STATUS_FLUXO = ['Recebido', 'Preparando', 'A caminho', 'Finalizado'];
 
@@ -96,21 +99,52 @@ export default function PedidosLojaScreen() {
   );
 };
 
+const renderItem = ({ item }: { item: Pedido }) => {
 
-  const renderItem = ({ item }: { item: Pedido }) => {
-    const statusAtualIndex = STATUS_FLUXO.indexOf(item.status);
-    const proximoStatus = STATUS_FLUXO[statusAtualIndex + 1];
+  const textoPagamento = (() => {
+    switch (item.metodo_pagamento) {
+      case "Pix":
+        return "Pix";
+      case "Cartão de Crédito":
+        return "Cartão";
+      case "Pagamento na Entrega":
+        return "Dinheiro na entrega";
+      default:
+        return item.metodo_pagamento || "Não informado";
+    }
+  })();
 
-    return (
-      <View style={styles.pedidoCard}>
-        <Text style={styles.clienteNome}>Pedido de: {item.nome_cliente}</Text>
+  const statusAtualIndex = STATUS_FLUXO.indexOf(item.status);
+  const proximoStatus = STATUS_FLUXO[statusAtualIndex + 1];
 
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color="#555" />
-          <Text style={styles.pedidoDetalhe}>
-            Data: {new Date(item.data_hora).toLocaleString("pt-BR")}
-          </Text>
-        </View>
+  return (
+    <View style={styles.pedidoCard}>
+      <Text style={styles.clienteNome}>Pedido de: {item.nome_cliente}</Text>
+
+      <View style={styles.detailRow}>
+        <Ionicons name="calendar-outline" size={16} color="#555" />
+        <Text style={styles.pedidoDetalhe}>
+          Data: {new Date(item.data_hora).toLocaleString("pt-BR")}
+        </Text>
+      </View>
+
+      <View style={styles.detailRow}>
+        <Ionicons name="bicycle-outline" size={16} color="#555" />
+        <Text style={styles.pedidoDetalhe}>
+          Entrega: {item.tipo_entrega === "pickup" ? "Retirada na loja" : "Entrega"}
+        </Text>
+      </View>
+
+      <View style={styles.detailRow}>
+        <Ionicons name="card-outline" size={16} color="#555" />
+        <Text style={styles.pedidoDetalhe}>
+          Pagamento: 
+  {item.status === "Aguardando Pagamento"
+    ? `${textoPagamento} (aguardando pagamento)`
+    : textoPagamento}
+
+        </Text>
+      </View>
 
         <View style={styles.detailRow}>
           <Ionicons name="call-outline" size={16} color="#555" />
