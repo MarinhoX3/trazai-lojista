@@ -36,22 +36,26 @@ export default function PedidosLojaScreen() {
   const { loja } = useAuthLoja();
   const { fetchPedidosPendentesCount } = usePedidosAtivos();
 
-  const buscarPedidos = useCallback(async () => {
-    if (!loja?.id) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      const response = await api.get(`/pedidos/loja/${loja.id}`);
-      setPedidos(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar pedidos da loja:", error);
-      Alert.alert("Erro", "Não foi possível carregar os pedidos da loja.");
-    } finally {
-      setLoading(false);
-    }
-  }, [loja?.id]);
+ const buscarPedidos = useCallback(async () => {
+  if (!loja?.id) {
+    setLoading(false);
+    return;
+  }
+  try {
+    setLoading(true);
+    const response = await api.get(`/pedidos/loja/${loja.id}`);
+    
+    // ADICIONE ESTE LOG AQUI:
+    console.log("CONTEUDO DA API PEDIDOS:", JSON.stringify(response.data, null, 2));
+
+    setPedidos(response.data);
+  } catch (error) {
+    console.error("Erro ao buscar pedidos da loja:", error);
+    Alert.alert("Erro", "Não foi possível carregar os pedidos.");
+  } finally {
+    setLoading(false);
+  }
+}, [loja?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -245,14 +249,32 @@ const renderItem = ({ item }: { item: Pedido }) => {
           <ActivityIndicator size="large" color="#007BFF" />
         </View>
       ) : (
-        <FlatList
-          data={pedidos}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          style={styles.lista}
-          ListHeaderComponent={<Text style={styles.titulo}>Gerir Pedidos Ativos</Text>}
-          contentContainerStyle={{ paddingBottom: 20 }}
-        />
+       <FlatList
+  data={pedidos}
+  renderItem={renderItem}
+  keyExtractor={(item) => item.id.toString()}
+  style={styles.lista}
+  ListHeaderComponent={<Text style={styles.titulo}>Gerir Pedidos Ativos</Text>}
+  contentContainerStyle={{ paddingBottom: 20 }}
+  // Adicione isso para quando a lista estiver vazia:
+  ListEmptyComponent={
+    <View style={{ marginTop: 50, alignItems: 'center', paddingHorizontal: 20 }}>
+      <Ionicons name="cart-outline" size={64} color="#ccc" />
+      <Text style={{ color: '#666', fontSize: 16, marginTop: 10, textAlign: 'center' }}>
+        Nenhum pedido ativo no momento.
+      </Text>
+      
+      {/* BOTÃO PARA IR AO HISTÓRICO */}
+      <Pressable 
+        style={[styles.actionButton, { marginTop: 20, width: '100%', backgroundColor: '#007BFF' }]}
+        onPress={() => router.push('/historico-pedidos')}
+      >
+        <Ionicons name="time-outline" size={20} color="#fff" />
+        <Text style={styles.actionButtonText}>Ver Histórico de Pedidos</Text>
+      </Pressable>
+    </View>
+  }
+/>
       )}
     </SafeAreaView>
   );

@@ -176,52 +176,58 @@ function Financeiro() {
             amount: Math.round(totalComissao * 100),
             loja_id: loja.id,
         });
+console.log("RETORNO DO BACKEND >>>", response.data);
+Alert.alert("DEBUG", JSON.stringify(response.data, null, 2));
 
         const { paymentIntent, ephemeralKey, customer } = response.data;
 
-        const { error: initError } = await stripe.initPaymentSheet({
-            merchantDisplayName: "TrazAí Plataforma",
-            customerId: customer,
-            customerEphemeralKeySecret: ephemeralKey,
-            paymentIntentClientSecret: paymentIntent,
-        });
+      const { error: initError } = await stripe.initPaymentSheet({
+  merchantDisplayName: "TrazAí Plataforma",
+  customerId: customer,
+  customerEphemeralKeySecret: ephemeralKey,
+  paymentIntentClientSecret: paymentIntent,
+});
 
-        if (initError) {
-            Alert.alert("Erro", initError.message);
-            return;
-        }
+if (initError) {
+  console.log("INIT ERROR >>>", initError);
+  Alert.alert("Erro", initError.message);
+  return;
+}
 
-        const { error: presentError } = await stripe.presentPaymentSheet();
 
-        if (presentError) {
-            Alert.alert(
-                "Atenção",
-                presentError.message.includes("Canceled")
-                    ? "Pagamento cancelado."
-                    : presentError.message
-            );
-            return;
-        }
+       const { error: presentError } = await stripe.presentPaymentSheet();
+
+if (presentError) {
+  console.log("PAYMENT SHEET ERROR >>>", presentError);
+  Alert.alert("Erro", presentError.message);
+  return;
+}
+
 
         Alert.alert("Sucesso!", "Comissão paga com sucesso.");
   // Caso 1: paymentIntent seja string ("pi_xyz_secret_abc")
-let paymentIntentId = paymentIntent;
+let paymentIntentId = null;
 
-// Caso 2: pagamentoIntent seja objeto ({ id: "pi_xyz", client_secret: "..." })
-if (typeof paymentIntent === "object" && paymentIntent.id) {
-    paymentIntentId = paymentIntent.id;
+// Caso 1: paymentIntent é string ("pi_xxx_secret_xxx")
+if (typeof paymentIntent === "string") {
+  paymentIntentId = paymentIntent;
 }
 
-// Extrair caso seja client_secret
-if (typeof paymentIntentId === "string" && paymentIntentId.includes("_secret")) {
-    paymentIntentId = paymentIntentId.split("_secret")[0];
+// Caso 2: paymentIntent é objeto ({ id: "pi_xxx", ... })
+if (typeof paymentIntent === "object" && paymentIntent?.id) {
+  paymentIntentId = paymentIntent.id;
 }
 
+// Remover parte _secret se existir
+if (paymentIntentId && paymentIntentId.includes("_secret")) {
+  paymentIntentId = paymentIntentId.split("_secret")[0];
+}
 
 await api.post("/payments/confirmar-pagamento-comissao", {
-    loja_id: loja.id,
-    paymentIntentId
+  loja_id: loja.id,
+  paymentIntentId,
 });
+
 
         fetchDadosFinanceiros();
     } catch (err) {
