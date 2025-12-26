@@ -4,7 +4,7 @@
     "slug": "traz-ai-lojista",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "applojista",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -57,7 +57,7 @@
       "androidCollapsedTitle": "TrazAí Loja"
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       "expo-router",

@@ -176,8 +176,6 @@ function Financeiro() {
             amount: Math.round(totalComissao * 100),
             loja_id: loja.id,
         });
-console.log("RETORNO DO BACKEND >>>", response.data);
-Alert.alert("DEBUG", JSON.stringify(response.data, null, 2));
 
         const { paymentIntent, ephemeralKey, customer } = response.data;
 
