@@ -23,7 +23,7 @@ export default ({ config }) => ({
       "expo-notifications",
       {
         icon: "./assets/images/notification-icon.png",
-        color: "#0B7709",
+          color: "#0B7709",
         androidCollapsedTitle: "TrazAí Loja"
       }
     ]
