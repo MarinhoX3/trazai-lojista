@@ -7,7 +7,7 @@ export default ({ config }) => ({
   slug: "traz-ai-lojista",
 
   extra: {
-    ...config.extra, // mantém o que já existe
+    ...config.extra,
     eas: {
       projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91"
     }
@@ -34,6 +34,7 @@ export default ({ config }) => ({
 
   android: {
     ...config.android,
+    package: "com.trazai.lojista",   // 👈 OBRIGATÓRIO
     googleServicesFile: "./google-services.json",
     useNextNotificationsApi: true,
     permissions: [
