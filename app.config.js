@@ -34,13 +34,13 @@ export default ({ config }) => ({
 
   android: {
     ...config.android,
-    package: "com.trazai.lojista",   // 👈 OBRIGATÓRIO
-    googleServicesFile: "./google-services.json",
-    useNextNotificationsApi: true,
-    permissions: [
-      "android.permission.RECEIVE_BOOT_COMPLETED",
-      "android.permission.VIBRATE",
-      "android.permission.POST_NOTIFICATIONS"
+    package: "com.adriano_marinho.trazailojista",
+  googleServicesFile: "./google-services.json",
+  useNextNotificationsApi: true,
+  permissions: [
+    "android.permission.RECEIVE_BOOT_COMPLETED",
+    "android.permission.VIBRATE",
+    "android.permission.POST_NOTIFICATIONS"
     ]
   }
 });
