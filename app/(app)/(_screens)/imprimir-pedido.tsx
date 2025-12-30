@@ -45,7 +45,7 @@ export default function ImprimirPedidoScreen() {
     const fetchPedido = async () => {
       try {
         setLoading(true)
-        const response = await api.get(`/pedidos/${id_pedido}`)
+       const response = await api.get(`/pedidos/${id_pedido}/detalhes`)
         setPedido(response.data)
       } catch (error) {
         console.error("Erro ao buscar pedido:", error)

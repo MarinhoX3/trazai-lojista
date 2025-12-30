@@ -239,18 +239,29 @@ export default function DetalhesPedidoScreen() {
         {/* Itens do Pedido */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Itens do Pedido</Text>
+{pedido.itens.map((item, index) => {
 
-          {pedido.itens.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <Text style={styles.itemQty}>
-                {parseInt(String(item.quantidade), 10)}x
-              </Text>
-              <Text style={styles.itemName}>{item.nome_produto}</Text>
-              <Text style={styles.itemPrice}>
-                R$ {parseFloat(item.preco_unitario_congelado).toFixed(2)}
-              </Text>
-            </View>
-          ))}
+  const qtd = Number(item.quantidade);
+
+  const quantidadeFormatada = Number.isInteger(qtd)
+    ? qtd.toString()
+    : qtd.toFixed(2).replace(".", ",");
+
+  return (
+    <View key={index} style={styles.itemRow}>
+      <Text style={styles.itemQty}>
+        {quantidadeFormatada}x
+      </Text>
+
+      <Text style={styles.itemName}>{item.nome_produto}</Text>
+
+      <Text style={styles.itemPrice}>
+        R$ {parseFloat(item.preco_unitario_congelado).toFixed(2)}
+      </Text>
+    </View>
+  );
+})}
+
         </View>
 
         {/* Total */}

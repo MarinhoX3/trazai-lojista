@@ -1,6 +1,5 @@
-// app/_layout.tsx
-import React, { useEffect } from "react";
-import { Stack, SplashScreen } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Stack } from "expo-router";
 import { View, Text, ActivityIndicator, Platform } from "react-native";
 import { AuthLojaProvider, useAuthLoja } from "../src/api/contexts/AuthLojaContext";
 import { PedidosAtivosProvider } from "../src/api/contexts/PedidosAtivosContext";
@@ -8,7 +7,7 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 import { usePushNotifications } from "../src/hooks/usePushNotifications";
 import * as Notifications from "expo-notifications";
 
-SplashScreen.preventAutoHideAsync();
+import Splash from "./splash";
 
 export default function RootLayout() {
   return (
@@ -25,7 +24,9 @@ export default function RootLayout() {
 function RootNavigation() {
   const { loja, loading } = useAuthLoja();
 
-  // 🔥 CRIA O CANAL DE NOTIFICAÇÃO ANTES DE CHAMAR O HOOK
+  const [showSplash, setShowSplash] = useState(true);
+
+  // 🔔 sempre chamado
   useEffect(() => {
     if (Platform.OS === "android") {
       Notifications.setNotificationChannelAsync("default", {
@@ -37,12 +38,19 @@ function RootNavigation() {
     }
   }, []);
 
-  // 🔥 Agora o hook pode rodar SEM PROBLEMAS
+  // 🔔 sempre chamado
   usePushNotifications(loja?.id);
 
+  // timer da splash (também SEM condicional)
   useEffect(() => {
-    if (!loading) SplashScreen.hideAsync();
-  }, [loading]);
+    const t = setTimeout(() => setShowSplash(false), 2500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // 👉 AQUI só troca o que renderiza (SEM mudar hooks)
+  if (showSplash) {
+    return <Splash onFinish={() => setShowSplash(false)} />;
+  }
 
   if (loading) {
     return (

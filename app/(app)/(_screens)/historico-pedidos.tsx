@@ -1,24 +1,23 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { Ionicons } from "@expo/vector-icons"
+import { useFocusEffect } from '@react-navigation/native'
+import { Stack, useRouter } from "expo-router"
+import { useCallback, useState } from "react"
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  FlatList,
   ActivityIndicator,
-  TouchableOpacity,
   Alert,
+  FlatList,
   Modal,
+  SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native"
-import { Stack } from "expo-router"
 import api from "../../../src/api/api"
 import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext"
-import { Ionicons } from "@expo/vector-icons"
-import { useFocusEffect } from '@react-navigation/native';
-
 
 interface HistoricoItem {
   id: number
@@ -148,6 +147,7 @@ const CustomDatePicker = ({
 }
 
 export default function HistoricoPedidosScreen() {
+  const router = useRouter(); 
   const [pedidos, setPedidos] = useState<HistoricoItem[]>([])
   const [loading, setLoading] = useState(false)
   const { loja } = useAuthLoja()
@@ -191,13 +191,24 @@ export default function HistoricoPedidosScreen() {
     }, [buscarHistoricoFiltrado])
   );
   
-  const renderItem = ({ item }: { item: HistoricoItem }) => (
-  <View style={[styles.pedidoCard, item.status === "Cancelado" && styles.cardCancelado]}>
+const renderItem = ({ item }: { item: HistoricoItem }) => (
+ <TouchableOpacity
+  onPress={() =>
+    router.push(`detalhes-pedido?id_pedido=${item.id}`)
+  }
+  activeOpacity={0.8}
+  style={[styles.pedidoCard, item.status === "Cancelado" && styles.cardCancelado]}
+>
+
     <View style={styles.cardHeader}>
       <View style={styles.clienteInfo}>
         <Ionicons name="person-circle-outline" size={20} color="#666" />
-        <Text style={styles.clienteNome}>{item.nome_cliente}</Text>
+        <View>
+          <Text style={styles.clienteNome}>{item.nome_cliente}</Text>
+          <Text style={styles.numeroPedido}>Pedido nº {item.id}</Text>
+        </View>
       </View>
+
       <View
         style={[styles.statusBadge, item.status === "Cancelado" ? styles.statusCancelado : styles.statusFinalizado]}
       >
@@ -232,9 +243,8 @@ export default function HistoricoPedidosScreen() {
         </View>
       )}
     </View>
-  </View>
+  </TouchableOpacity>
 )
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -420,6 +430,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1a1a1a",
     flex: 1,
+  },
+  numeroPedido: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 2,
   },
   statusBadge: {
     paddingVertical: 4,
