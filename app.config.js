@@ -3,44 +3,91 @@ import 'dotenv/config';
 export default ({ config }) => ({
   ...config,
 
-  name: "TrazAi Loja",
+  name: "TrazAi-Loja",
   slug: "traz-ai-lojista",
+  scheme: "applojista",
 
-  extra: {
-    ...config.extra,
-    eas: {
-      projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91"
-    }
+  version: "1.0.0",
+
+  orientation: "portrait",
+  userInterfaceStyle: "light",
+  newArchEnabled: true,
+
+  icon: "./assets/images/icon.png",
+
+  ios: {
+    supportsTablet: true,
+  },
+
+  android: {
+    package: "com.adriano_marinho.trazailojista",
+    versionCode: 28,
+
+    adaptiveIcon: {
+      foregroundImage: "./assets/images/adaptive-icon.png",
+      backgroundColor: "#ffffff",
+    },
+
+    edgeToEdgeEnabled: true,
+
+    googleServicesFile: "./google-services.json",
+
+    intentFilters: [
+      {
+        action: "VIEW",
+        data: [{ scheme: "whatsapp" }, { scheme: "https", host: "wa.me" }],
+        category: ["BROWSABLE", "DEFAULT"],
+      },
+      {
+        action: "VIEW",
+        data: [{ scheme: "applojista" }],
+        category: ["BROWSABLE", "DEFAULT"],
+      },
+    ],
   },
 
   notification: {
     icon: "./assets/images/notification-icon.png",
     color: "#0B7709",
     androidMode: "default",
-    androidCollapsedTitle: "TrazAí Loja"
+    androidCollapsedTitle: "TrazAí Loja",
   },
 
   plugins: [
-    ...(config.plugins || []),
+    "expo-router",
+
+    [
+      "expo-build-properties",
+      {
+        android: {
+          compileSdkVersion: 35,
+          targetSdkVersion: 35,
+          minSdkVersion: 24,
+          buildToolsVersion: "35.0.0",
+          kotlinVersion: "2.0.21",
+        },
+      },
+    ],
+
     [
       "expo-notifications",
       {
         icon: "./assets/images/notification-icon.png",
         color: "#0B7709",
-        androidCollapsedTitle: "TrazAí Loja"
-      }
-    ]
+        androidCollapsedTitle: "TrazAí Loja",
+      },
+    ],
   ],
 
-  android: {
-    ...config.android,
-    package: "com.adriano_marinho.trazailojista",
-  googleServicesFile: "./google-services.json",
-  useNextNotificationsApi: true,
-  permissions: [
-    "android.permission.RECEIVE_BOOT_COMPLETED",
-    "android.permission.VIBRATE",
-    "android.permission.POST_NOTIFICATIONS"
-    ]
-  }
+  extra: {
+    router: {},
+    apiBaseUrl: "https://trazai.shop/api",
+    assetBaseUrl: "https://trazai.shop",
+
+    eas: {
+      projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91",
+    },
+  },
+
+  owner: "adriano_marinho",
 });
