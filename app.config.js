@@ -7,7 +7,10 @@ export default ({ config }) => ({
   slug: "traz-ai-lojista",
 
   extra: {
-    ...config.extra, // 👈 mantém tudo que está no app.json
+    ...config.extra, // mantém o que já existe
+    eas: {
+      projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91"
+    }
   },
 
   notification: {
@@ -23,7 +26,7 @@ export default ({ config }) => ({
       "expo-notifications",
       {
         icon: "./assets/images/notification-icon.png",
-          color: "#0B7709",
+        color: "#0B7709",
         androidCollapsedTitle: "TrazAí Loja"
       }
     ]
