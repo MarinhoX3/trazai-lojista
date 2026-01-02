@@ -1,3 +1,6 @@
+
+//app/(app)/(screens)/create-product.tsx
+
 "use client"
 import { Appearance } from "react-native";
 import { useState, useEffect } from "react"   // ← IMPORTAR useEffect
@@ -440,7 +443,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   saveButton: {
-    backgroundColor: "#D80032",
+    backgroundColor: "#059a05ff",
     height: 56,
     borderRadius: 12,
     justifyContent: "center",

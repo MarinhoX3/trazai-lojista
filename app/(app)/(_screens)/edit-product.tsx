@@ -1,122 +1,119 @@
-"use client"
-
-import { Picker } from "@react-native-picker/picker"
-import * as ImagePicker from "expo-image-picker"
-import { Image } from "react-native"
-import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router"
-import { useCallback, useEffect, useState } from "react"
+"use client";
+import { Picker } from "@react-native-picker/picker";
+import * as ImagePicker from "expo-image-picker";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Button,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import api from "../../../src/api/api"
-import { productCategoriesForForms } from "../../../src/constants/categories"
-
-// ====================================================================
-// COMPONENTE DE EDIÇÃO DE PRODUTO
-// ====================================================================
+  ActivityIndicator, Alert, Appearance, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text,
+  TextInput, View
+} from "react-native";
+import api, { ASSET_BASE_URL } from "../../../src/api/api";
+import { productCategoriesForForms } from "../../../src/constants/categories";
 
 export default function EditProductScreen() {
-  const { id } = useLocalSearchParams<Record<string, string>>()
-  const router = useRouter()
-  const insets = useSafeAreaInsets()
 
-  const [nome, setNome] = useState("")
-  const [descricao, setDescricao] = useState("")
-  const [preco, setPreco] = useState("")
-  const [estoque, setEstoque] = useState("")
-  const [unidade, setUnidade] = useState("UN")
-  const [categoria, setCategoria] = useState("")
-  const [novaImagem, setNovaImagem] = useState<any>(null)
-  const [imagemExistente, setImagemExistente] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
+  useEffect(() => {
+    Appearance.setColorScheme("light");
+  }, []);
 
-  // ====================================================================
-  // LIMPA NÚMEROS (ESTOQUE) - LÓGICA DE CORREÇÃO DE MILHAR
-  // ====================================================================
-  const cleanNumberString = useCallback((value: string | number | null | undefined) => {
-    if (value === null || value === undefined) return ""
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
 
-    const valueString = String(value)
-    // Remove tudo que não é dígito (Ex: "1.000" vira "1000")
-    const cleanedDigits = valueString.replace(/[^0-9]/g, "")
+  const [nome, setNome] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [preco, setPreco] = useState("");
+  const [unidade, setUnidade] = useState("UN");
+  const [estoque, setEstoque] = useState("");
 
-    if (!cleanedDigits) return ""
+  const [categoria, setCategoria] = useState("");
 
-    const numericValue = Number.parseInt(cleanedDigits, 10)
+  const [imagem, setImagem] = useState<any>(null);
+  const [imagemExistente, setImagemExistente] = useState<string | null>(null);
 
-    // CORREÇÃO: Se for 1000, 2000, etc., assume que o ponto foi um separador de milhar.
-    if (numericValue >= 1000 && numericValue % 1000 === 0) {
-        const dividedValue = numericValue / 1000
-        return String(dividedValue) 
-    }
-    
-    // Retorna o valor como string de número puro.
-    return String(numericValue)
-  }, [])
+  const [isSaving, setIsSaving] = useState(false);
 
-  // ====================================================================
-  // CARREGA PRODUTO
-  // ====================================================================
+  const unidadeOptions = [
+    { label: "UN - Unidade", value: "UN" },
+    { label: "KG - Quilograma", value: "KG" },
+    { label: "G - Grama", value: "G" },
+    { label: "L - Litro", value: "L" },
+    { label: "ML - Mililitro", value: "ML" },
+    { label: "CX - Caixa", value: "CX" },
+    { label: "PCT - Pacote", value: "PCT" },
+    { label: "DZ - Dúzia", value: "DZ" },
+    { label: "M - Metro", value: "M" },
+    { label: "CM - Centímetro", value: "CM" },
+  ];
+
+// 🔢 limpa estoque (sem 10.000)
+const normalizeEstoque = useCallback((value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return "";
+
+  const valueString = String(value);
+
+  // remove tudo que não é número
+  const cleanedDigits = valueString.replace(/[^0-9]/g, "");
+
+  if (!cleanedDigits) return "";
+
+  const numericValue = Number.parseInt(cleanedDigits, 10);
+
+  // 👉 regra antiga que estava funcionando
+  // se vier 2000, 3000, 10000 etc
+  // significa 2, 3, 10
+  if (numericValue >= 1000 && numericValue % 1000 === 0) {
+    return String(numericValue / 1000);
+  }
+
+  return String(numericValue);
+}, []);
+
+
+  // =========================================
+  // BUSCAR PRODUTO
+  // =========================================
   const fetchProduct = useCallback(async () => {
     try {
-      const response = await api.get(`/produtos/${id}`)
-      const product = response.data
+      const res = await api.get(`/produtos/${id}`);
+      const p = res.data;
 
-      setNome(product.nome || "")
-      setDescricao(product.descricao || "")
-      setPreco(String(product.preco || ""))
-      
-      // Aplica a correção de estoque na inicialização
-      setEstoque(cleanNumberString(product.estoque)); 
-      
-      setUnidade(product.unidade_de_venda || "UN")
-      setCategoria(product.categoria || "") // Garante que o ID da categoria seja setado
+      setNome(p.nome || "");
+      setDescricao(p.descricao || "");
+      setPreco(String(p.preco || ""));
+      setUnidade(p.unidade_de_venda || "UN");
 
-      if (product.foto) {
-        const timestamp = new Date().getTime()
-        // URL Corrigida (sem uploads/uploads/)
-        const imgUrl = `https://trazai.shop/${product.foto}?t=${timestamp}`
-        setImagemExistente(imgUrl)
+      // limpa estoque recebido
+      setEstoque(normalizeEstoque(String(p.estoque ?? "")));
+
+      setCategoria(p.categoria || "");
+
+      // FOTO CORRIGIDA
+      if (p.foto) {
+        setImagemExistente(
+          `${ASSET_BASE_URL}/${p.foto}?t=${Date.now()}`
+        );
       } else {
-        setImagemExistente(null)
+        setImagemExistente(null);
       }
-    } catch (error) {
-      console.error("Erro ao carregar produto:", error)
+
+    } catch (e) {
+      console.log(e);
+      Alert.alert("Erro", "Não foi possível carregar o produto.");
     }
-  }, [id, cleanNumberString])
+  }, [id, normalizeEstoque]);
 
-  // 1. CHAMA fetchProduct no montagem inicial
   useEffect(() => {
-    fetchProduct()
-  }, [id, fetchProduct])
+    fetchProduct();
+  }, [fetchProduct]);
 
-  // 2. CHAMA fetchProduct sempre que a tela ganha o foco (retorna)
-  useFocusEffect(
-    useCallback(() => {
-      fetchProduct()
-    }, [fetchProduct])
-  )
-  
-  // ====================================================================
-  // SELECIONAR IMAGEM
-  // ====================================================================
+  // =========================================
+  // IMAGE PICKER
+  // =========================================
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!permission.granted) {
-      Alert.alert("Atenção", "Você precisa permitir acesso à galeria.")
-      return
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert("Atenção", "Permita acesso a imagens.");
+      return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -124,213 +121,251 @@ export default function EditProductScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
-    })
+    });
 
     if (!result.canceled) {
-      setNovaImagem(result.assets[0])
+      setImagem(result.assets[0]);
     }
-  }
+  };
 
-  // ====================================================================
-  // SALVAR ALTERAÇÕES
-  // ====================================================================
-  const handleUpdate = useCallback(async () => {
-    // Validação também pega o placeholder da categoria
+  // =========================================
+  // SALVAR
+  // =========================================
+  const handleSave = async () => {
     if (!nome || !preco || !categoria) {
-      Alert.alert("Atenção", "Nome, Preço e Categoria são obrigatórios.")
-      return
+      Alert.alert("Atenção", "Nome, preço e categoria são obrigatórios.");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
+
+    const form = new FormData();
+
+    form.append("nome", nome);
+    form.append("descricao", descricao);
+    form.append("preco", preco.replace(",", "."));
+    form.append("unidade_de_venda", unidade);
+
+    // 📌 estoque limpo corretamente
+    form.append("estoque", normalizeEstoque(estoque) || "0");
+
+    form.append("categoria", categoria);
+
+    if (imagem) {
+      form.append("foto", {
+        uri: Platform.OS === "android" ? imagem.uri : imagem.uri.replace("file://", ""),
+        name: "photo.jpg",
+        type: "image/jpeg",
+      } as any);
+    }
+
     try {
-      const formData = new FormData()
-      formData.append("nome", nome)
-      formData.append("descricao", descricao)
-      formData.append("preco", preco.replace(",", "."))
-      formData.append("estoque", estoque || "0") 
-      formData.append("unidade_de_venda", unidade)
-      formData.append("categoria", categoria)
-
-      if (novaImagem) {
-        const uri = Platform.OS === "android" ? novaImagem.uri : novaImagem.uri.replace("file://", "")
-        const ext = uri.split(".").pop()
-
-        formData.append("foto", {
-          uri,
-          name: `photo.${ext}`,
-          type: `image/${ext}`,
-        } as any)
-      }
-
-      await api.put(`/produtos/${id}`, formData, {
+      await api.put(`/produtos/${id}`, form, {
         headers: { "Content-Type": "multipart/form-data" },
-      })
+      });
 
-      // Limpa a imagem local e recarrega os dados para exibir a nova imagem
-      setNovaImagem(null) 
-      await fetchProduct() 
-      
-      Alert.alert("Sucesso", "Produto atualizado com sucesso.", [
-        { 
-          text: "OK", 
-          onPress: () => router.back() 
-        }
-      ])
-    } catch (error: any) {
-      console.error(error)
-      Alert.alert("Erro", "Não foi possível atualizar o produto.")
+      Alert.alert("Sucesso", "Produto atualizado!", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+
+    } catch (e: any) {
+      console.log(e?.response?.data || e);
+      Alert.alert("Erro", "Não foi possível atualizar o produto.");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }, [id, nome, descricao, preco, estoque, unidade, categoria, novaImagem, router, fetchProduct]) 
+  };
 
-  // ====================================================================
-  // DELETAR PRODUTO
-  // ====================================================================
-  const handleDelete = useCallback(() => {
-    Alert.alert("Confirmar Exclusão", "Deseja deletar este produto?", [
-      { text: "Cancelar", style: "cancel" },
+  // =========================================
+  // DELETE
+  // =========================================
+  const handleDelete = async () => {
+    Alert.alert("Excluir Produto", "Tem certeza?", [
+      { text: "Cancelar" },
       {
-        text: "Deletar",
+        text: "Excluir",
         style: "destructive",
         onPress: async () => {
-          await api.delete(`/produtos/${id}`)
-          router.back()
+          await api.delete(`/produtos/${id}`);
+          router.back();
         },
       },
-    ])
-  }, [id, router])
+    ]);
+  };
 
-  // ====================================================================
-  // IMAGEM A EXIBIR
-  // ====================================================================
-  const displayImageUri = novaImagem?.uri ?? imagemExistente ?? null
-
-  // ====================================================================
-  // RENDER
-  // ====================================================================
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ title: "Editar Produto" }} />
 
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}>
-          <Text style={styles.titulo}>Editar Produto</Text>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+
+          <View style={styles.header}>
+            <Text style={styles.titulo}>Editar Produto</Text>
+            <Text style={styles.subtitulo}>Atualize as informações do produto</Text>
+          </View>
 
           {/* IMAGEM */}
-          <Pressable onPress={pickImage} style={styles.imageContainer}>
-            {displayImageUri ? (
-              <Image
-                source={{ uri: displayImageUri, cache: "reload" }}
-                style={styles.productImage}
-                resizeMode="cover"
-                onError={(error) => {
-                  console.log("[ERRO_IMG] Falha ao carregar imagem:", error.nativeEvent.error)
-                }}
-                onLoad={() => {
-                  console.log("[INFO_IMG] Imagem carregada com sucesso!")
-                }}
-              />
-            ) : (
-              <View style={[styles.productImage, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ color: '#aaa' }}>Sem Imagem</Text>
-              </View>
-            )}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Imagem do Produto</Text>
 
-            <Text style={styles.imagePickerText}>Trocar Imagem</Text>
+            <Pressable style={styles.imageUploadArea} onPress={pickImage}>
+              {imagem ? (
+                <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />
+              ) : imagemExistente ? (
+                <Image source={{ uri: imagemExistente }} style={styles.imagemPreview} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Text style={styles.imagePlaceholderIcon}>📷</Text>
+                  <Text style={styles.imagePlaceholderText}>Toque para trocar imagem</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+
+          {/* CAMPOS */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Informações</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nome *</Text>
+              <TextInput style={styles.input} value={nome} onChangeText={setNome} />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Descrição</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={descricao}
+                multiline
+                onChangeText={setDescricao}
+              />
+            </View>
+
+            <View style={styles.row}>
+
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Preço *</Text>
+                <View style={styles.priceInputContainer}>
+                  <Text style={styles.currencySymbol}>R$</Text>
+                  <TextInput
+                    style={[styles.input, styles.priceInput]}
+                    value={preco}
+                    onChangeText={setPreco}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Estoque</Text>
+                <TextInput
+  style={styles.input}
+  value={estoque}
+  keyboardType="numeric"
+  onChangeText={(v) => setEstoque(normalizeEstoque(v))}
+/>
+
+              </View>
+
+            </View>
+
+            {/* Categoria */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Categoria *</Text>
+              <View style={styles.pickerContainer}>
+                <Picker selectedValue={categoria} onValueChange={setCategoria}>
+                  {productCategoriesForForms.map((c) => (
+                    <Picker.Item key={c.id} label={c.name} value={c.id} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+            {/* Unidade */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Unidade *</Text>
+              <View style={styles.pickerContainer}>
+                <Picker selectedValue={unidade} onValueChange={setUnidade}>
+                  {unidadeOptions.map((u) => (
+                    <Picker.Item key={u.value} label={u.label} value={u.value} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+          </View>
+
+          <Pressable style={styles.saveButton} onPress={handleSave} disabled={isSaving}>
+            {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Salvar Alterações</Text>}
           </Pressable>
 
-          {/* NOME */}
-          <Text style={styles.label}>Nome do Produto</Text>
-          <TextInput style={styles.input} value={nome} onChangeText={setNome} />
+          <Pressable style={styles.deleteButton} onPress={handleDelete}>
+            <Text style={styles.deleteButtonText}>Excluir Produto</Text>
+          </Pressable>
 
-          {/* DESCRIÇÃO */}
-          <Text style={styles.label}>Descrição</Text>
-          <TextInput style={styles.input} value={descricao} onChangeText={setDescricao} multiline />
-
-          {/* PREÇO */}
-          <Text style={styles.label}>Preço (R$)</Text>
-          <TextInput style={styles.input} value={preco} onChangeText={setPreco} keyboardType="decimal-pad" />
-
-          {/* ESTOQUE */}
-          <Text style={styles.label}>Estoque</Text>
-          <TextInput
-            style={styles.input}
-            value={estoque}
-            onChangeText={(text) => setEstoque(cleanNumberString(text))}
-            keyboardType="numeric"
-          />
-
-          {/* UNIDADE */}
-          <Text style={styles.label}>Unidade de Venda</Text>
-          <TextInput style={styles.input} value={unidade} onChangeText={setUnidade} />
-
-          {/* CATEGORIA - COM AJUSTE DE ESTILO DO PICKER */}
-          <Text style={styles.label}>Categoria</Text>
-          <View style={styles.pickerContainer}>
-            <Picker 
-              selectedValue={categoria} 
-              onValueChange={(value) => setCategoria(value)}
-              style={styles.picker} 
-            >
-                {/* Placeholder para seleção */}
-                <Picker.Item 
-                  key="placeholder" 
-                  label="Selecione a Categoria" 
-                  value="" 
-                  color="#999" 
-                />
-                
-                {productCategoriesForForms.map((cat) => (
-                  <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
-                ))}
-            </Picker>
-          </View>
-
-          {/* BOTÕES */}
-          <View style={styles.buttonContainer}>
-            {isSaving ? <ActivityIndicator /> : <Button title="Salvar Alterações" onPress={handleUpdate} />}
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <Button title="Deletar Produto" color="red" onPress={handleDelete} />
-          </View>
         </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
-  )
+  );
 }
 
-// ====================================================================
-// STYLES
-// ====================================================================
+
+// === estilos iguais do formulário de criação ===
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: { padding: 20 },
-  titulo: { fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
-  label: { fontSize: 16, fontWeight: "600", marginBottom: 5 },
-  input: {
+  container: { flex: 1, backgroundColor: "#f5f5f5" },
+  scrollContent: { paddingHorizontal: 16 },
+  header: { paddingTop: 20, paddingBottom: 24 },
+  titulo: { fontSize: 28, fontWeight: "700", color: "#1a1a1a" },
+  subtitulo: { color: "#666" },
+  section: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 16 },
+  sectionTitle: { fontSize: 17, fontWeight: "600", marginBottom: 12 },
+  imageUploadArea: {
+    height: 200,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: "#ddd",
+    overflow: "hidden",
+  },
+  imagemPreview: { width: "100%", height: "100%" },
+  imagePlaceholder: { flex: 1, alignItems: "center", justifyContent: "center" },
+  imagePlaceholderIcon: { fontSize: 48 },
+  imagePlaceholderText: { color: "#777" },
+  inputGroup: { marginBottom: 12 },
+  label: { fontWeight: "600" },
+  input: { borderRadius: 10, backgroundColor: "#fff", padding: 12, borderWidth: 1, borderColor: "#ddd" },
+  textArea: { height: 100 },
+  row: { flexDirection: "row", gap: 12 },
+  halfWidth: { flex: 1 },
+  priceInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+    paddingLeft: 10,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 15,
-    overflow: 'hidden',
+  currencySymbol: { fontWeight: "700" },
+  priceInput: { flex: 1, borderWidth: 0 },
+  pickerContainer: { borderWidth: 1, borderColor: "#ddd", borderRadius: 10, overflow: "hidden" },
+  picker: { height: 50 },
+  saveButton: {
+    backgroundColor: "#04b307ff",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 1,
   },
-  picker: { 
-    height: 50, 
-    width: '100%',
-    color: '#000', 
+  saveButtonText: { color: "#fff", fontWeight: "700" },
+  deleteButton: {
+    backgroundColor: "#c62828ff",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 30,
   },
-  imageContainer: { alignItems: "center", marginBottom: 20 },
-  productImage: { width: 150, height: 150, borderRadius: 10, backgroundColor: "#eee" },
-  imagePickerText: { color: "#007BFF", fontWeight: "bold", marginTop: 8 },
-  buttonContainer: { marginTop: 10 },
-})
+  deleteButtonText: { color: "#fff", fontWeight: "700" },
+});
