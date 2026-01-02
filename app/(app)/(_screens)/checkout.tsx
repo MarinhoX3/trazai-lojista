@@ -18,7 +18,7 @@ const CheckoutScreen = () => {
     setLoading(true);
 
     try {
-      // 🚨 ROTA ATUALIZADA
+      // 🚨 ROTA DO BACKEND (cartão + boleto)
       const response = await api.post('/checkout/create-payment-intent-comissao', {
         amount: Math.round(totalComissao * 100),
         loja_id: lojaId,
@@ -26,20 +26,25 @@ const CheckoutScreen = () => {
 
       const { paymentIntent, ephemeralKey, customer } = response.data;
 
-      // Inicializa PaymentSheet
+      // ✅ Inicializa PaymentSheet
       const { error: initError } = await initPaymentSheet({
         merchantDisplayName: 'TrazAí Plataforma',
+
         customerId: customer,
         customerEphemeralKeySecret: ephemeralKey,
         paymentIntentClientSecret: paymentIntent,
+
+        // 👇 OBRIGATÓRIO PARA BOLETO APARECER
+        allowsDelayedPaymentMethods: true,
       });
 
       if (initError) {
-        Alert.alert('Erro ao inicializar pagamento', initError.message);
+        console.log(initError);
+        Alert.alert('Erro ao abrir pagamento', initError.message);
         return;
       }
 
-      // Abre PaymentSheet
+      // ✅ Abre PaymentSheet para escolher método
       const { error: presentError } = await presentPaymentSheet();
 
       if (presentError) {
@@ -48,6 +53,7 @@ const CheckoutScreen = () => {
       } else {
         router.push('./pagamento-comissao-sucesso');
       }
+
     } catch (error) {
       console.error('Erro ao iniciar o checkout:', error);
       Alert.alert('Erro', 'Não foi possível iniciar o pagamento.');
@@ -65,12 +71,12 @@ const CheckoutScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Finalizar Pagamento</Text>
+      <Text style={styles.title}>Processando pagamento...</Text>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#007BFF" />
+        <ActivityIndicator size="large" />
       ) : (
-        <Text>O seu pagamento está pronto para ser processado.</Text>
+        <Text>Aguardando abertura do checkout.</Text>
       )}
     </View>
   );
@@ -85,7 +91,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',

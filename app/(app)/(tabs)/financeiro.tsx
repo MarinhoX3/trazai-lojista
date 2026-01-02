@@ -1,22 +1,22 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
+import { useCallback, useState } from "react";
 import {
-    View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    Alert,
-    ActivityIndicator,
-    ScrollView,
+    View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
-import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext";
-import api from "../../../src/api/api";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useStripe, StripeProvider } from "@stripe/stripe-react-native";
+import api from "../../../src/api/api";
+import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext";
 
 interface RepasseFuturo {
     data: string;
@@ -179,12 +179,21 @@ function Financeiro() {
 
         const { paymentIntent, ephemeralKey, customer } = response.data;
 
-      const { error: initError } = await stripe.initPaymentSheet({
+     const { error: initError } = await stripe.initPaymentSheet({
   merchantDisplayName: "TrazAí Plataforma",
+
   customerId: customer,
   customerEphemeralKeySecret: ephemeralKey,
   paymentIntentClientSecret: paymentIntent,
+
+  allowsDelayedPaymentMethods: true,   // 👈 OBRIGATÓRIO p/ boleto
+  defaultBillingDetails: {             // 👈 país precisa ser BR
+    address: {
+      country: "BR",
+    },
+  },
 });
+
 
 if (initError) {
   console.log("INIT ERROR >>>", initError);
