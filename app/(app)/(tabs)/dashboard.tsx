@@ -230,15 +230,15 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F7F7F7" },
   dashboardHeader: { alignItems: "center", marginTop: 10 },
-  dashboardTitle: { fontSize: 22, fontWeight: "bold", color: "#FF0000" },
-  dashboardSubtitle: { fontSize: 15, color: "#555", marginTop: 4 },
+  dashboardTitle: { fontSize: 25, fontWeight: "bold", color: "#000000ff" },
+  dashboardSubtitle: { fontSize: 15, color: "#000000ff", marginTop: 4 },
   raioContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 10,
   },
-  raioLabel: { fontSize: 16, color: "#333", marginRight: 10 },
+  raioLabel: { fontSize: 16, color: "#000000ff", marginRight: 10 },
   raioInput: {
     backgroundColor: "#FFF",
     borderRadius: 8,
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     width: 70,
     textAlign: "center",
     fontSize: 16,
-    color: "#000",
+    color: "#000000ff",
     padding: 5,
   },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   botaoAdicionar: {
-    backgroundColor: "#FF0000",
+    backgroundColor: "#1c9cd7ff",
     paddingVertical: 15,
     borderRadius: 25,
     width: "100%",
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  produtoCardPreco: { fontSize: 14, color: "#FF0000", fontWeight: "600" },
+  produtoCardPreco: { fontSize: 14, color: "#15a232ff", fontWeight: "600" },
   produtoCardEstoque: { fontSize: 12, fontWeight: "bold" },
   emptyListText: { fontSize: 16, color: "#666", textAlign: "center" },
 });
