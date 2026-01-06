@@ -1,36 +1,52 @@
 "use client";
+
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator, Alert, Appearance, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text,
-  TextInput, View
+  ActivityIndicator,
+  Alert,
+  Appearance,
+  GestureResponderEvent,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  StatusBar,
+  TouchableOpacity,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Importações de API e Constantes
 import api, { ASSET_BASE_URL } from "../../../src/api/api";
 import { productCategoriesForForms } from "../../../src/constants/categories";
 
 export default function EditProductScreen() {
+  const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     Appearance.setColorScheme("light");
   }, []);
-
-  const { id } = useLocalSearchParams();
-  const router = useRouter();
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [preco, setPreco] = useState("");
   const [unidade, setUnidade] = useState("UN");
   const [estoque, setEstoque] = useState("");
-
   const [categoria, setCategoria] = useState("");
-
   const [imagem, setImagem] = useState<any>(null);
   const [imagemExistente, setImagemExistente] = useState<string | null>(null);
-
   const [isSaving, setIsSaving] = useState(false);
+  const [ativo, setAtivo] = useState<boolean>(true);
 
   const unidadeOptions = [
     { label: "UN - Unidade", value: "UN" },
@@ -45,327 +61,411 @@ export default function EditProductScreen() {
     { label: "CM - Centímetro", value: "CM" },
   ];
 
-// 🔢 limpa estoque (sem 10.000)
-const normalizeEstoque = useCallback((value: string | number | null | undefined) => {
-  if (value === null || value === undefined) return "";
+  // 🔢 Normaliza o valor de stock para o formato esperado
+  const normalizeEstoque = useCallback((value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return "";
+    const valueString = String(value);
+    const cleanedDigits = valueString.replace(/[^0-9]/g, "");
+    if (!cleanedDigits) return "";
+    const numericValue = Number.parseInt(cleanedDigits, 10);
+    
+    // Regra para lidar com valores multiplicados por 1000 da API
+    if (numericValue >= 1000 && numericValue % 1000 === 0) {
+      return String(numericValue / 1000);
+    }
+    return String(numericValue);
+  }, []);
 
-  const valueString = String(value);
-
-  // remove tudo que não é número
-  const cleanedDigits = valueString.replace(/[^0-9]/g, "");
-
-  if (!cleanedDigits) return "";
-
-  const numericValue = Number.parseInt(cleanedDigits, 10);
-
-  // 👉 regra antiga que estava funcionando
-  // se vier 2000, 3000, 10000 etc
-  // significa 2, 3, 10
-  if (numericValue >= 1000 && numericValue % 1000 === 0) {
-    return String(numericValue / 1000);
-  }
-
-  return String(numericValue);
-}, []);
-
-
-  // =========================================
-  // BUSCAR PRODUTO
-  // =========================================
+  // 🔄 Procura os dados do produto na API
   const fetchProduct = useCallback(async () => {
     try {
       const res = await api.get(`/produtos/${id}`);
       const p = res.data;
-
+      
       setNome(p.nome || "");
       setDescricao(p.descricao || "");
       setPreco(String(p.preco || ""));
       setUnidade(p.unidade_de_venda || "UN");
-
-      // limpa estoque recebido
       setEstoque(normalizeEstoque(String(p.estoque ?? "")));
-
       setCategoria(p.categoria || "");
+      
+      // ✅ Correção Crucial: Normaliza o estado ativo vindo da API
+      // Aceita 1, "1", true ou "true" para definir como ativo
 
-      // FOTO CORRIGIDA
+const statusAtivo =
+  p?.ativo == 1 ||
+  p?.ativo === true;
+
+setAtivo(statusAtivo);
+
+console.log("API ativo =>", p.ativo, typeof p.ativo);
+
       if (p.foto) {
-        setImagemExistente(
-          `${ASSET_BASE_URL}/${p.foto}?t=${Date.now()}`
-        );
+        setImagemExistente(`${ASSET_BASE_URL}/${p.foto}?t=${Date.now()}`);
       } else {
         setImagemExistente(null);
       }
-
     } catch (e) {
-      console.log(e);
-      Alert.alert("Erro", "Não foi possível carregar o produto.");
+      Alert.alert("Erro", "Não foi possível carregar os dados do produto.");
     }
   }, [id, normalizeEstoque]);
 
-  useEffect(() => {
-    fetchProduct();
-  }, [fetchProduct]);
+    useEffect(() => {
+  fetchProduct();
+}, [fetchProduct]);
 
-  // =========================================
-  // IMAGE PICKER
-  // =========================================
+  // 📷 Seleção de imagem da galeria
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert("Atenção", "Permita acesso a imagens.");
+      Alert.alert("Atenção", "Precisamos de permissão para aceder às suas fotos.");
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 1,
+      quality: 0.8,
     });
-
     if (!result.canceled) {
       setImagem(result.assets[0]);
     }
   };
 
-  // =========================================
-  // SALVAR
-  // =========================================
-  const handleSave = async () => {
-    if (!nome || !preco || !categoria) {
-      Alert.alert("Atenção", "Nome, preço e categoria são obrigatórios.");
-      return;
-    }
+  // 💾 Guarda as alterações do produto
+ const handleToggleStatus = async () => {
+  try {
+    const novoStatus = !ativo; // inverte o estado atual
 
-    setIsSaving(true);
+    await api.put(`/produtos/${id}`, {
+      ativo: novoStatus ? 1 : 0,
+    });
 
-    const form = new FormData();
+    setAtivo(novoStatus);
 
-    form.append("nome", nome);
-    form.append("descricao", descricao);
-    form.append("preco", preco.replace(",", "."));
-    form.append("unidade_de_venda", unidade);
+    Alert.alert(
+      "Status do produto",
+      novoStatus ? "Produto ativado com sucesso!" : "Produto inativado com sucesso!"
+    );
 
-    // 📌 estoque limpo corretamente
-    form.append("estoque", normalizeEstoque(estoque) || "0");
+  } catch (e) {
+    Alert.alert(
+      "Erro",
+      "Não foi possível alterar o estado do produto."
+    );
+  }
+};
 
-    form.append("categoria", categoria);
-
-    if (imagem) {
-      form.append("foto", {
-        uri: Platform.OS === "android" ? imagem.uri : imagem.uri.replace("file://", ""),
-        name: "photo.jpg",
-        type: "image/jpeg",
-      } as any);
-    }
-
-    try {
-      await api.put(`/produtos/${id}`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      Alert.alert("Sucesso", "Produto atualizado!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-
-    } catch (e: any) {
-      console.log(e?.response?.data || e);
-      Alert.alert("Erro", "Não foi possível atualizar o produto.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // =========================================
-  // DELETE
-  // =========================================
+  // 🗑️ Elimina o produto
   const handleDelete = async () => {
-    Alert.alert("Excluir Produto", "Tem certeza?", [
-      { text: "Cancelar" },
+    Alert.alert("Eliminar Produto", "Tem a certeza que deseja apagar este produto permanentemente?", [
+      { text: "Cancelar", style: "cancel" },
       {
-        text: "Excluir",
+        text: "Eliminar",
         style: "destructive",
         onPress: async () => {
-          await api.delete(`/produtos/${id}`);
-          router.back();
+          try {
+            await api.delete(`/produtos/${id}`);
+            router.back();
+          } catch (e) {
+            Alert.alert("Erro", "Falha ao eliminar o produto.");
+          }
         },
       },
     ]);
   };
 
+
+  function handleSave(event: GestureResponderEvent): void {
+    throw new Error("Function not implemented.");
+  }
+
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ title: "Editar Produto" }} />
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <StatusBar barStyle="dark-content" />
+      <Stack.Screen options={{ headerShown: false }} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+      {/* HEADER PERSONALIZADO */}
+      <View style={[styles.customHeader, { paddingTop: insets.top + 10 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={28} color="#1e293b" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Editar Produto</Text>
+        <TouchableOpacity onPress={handleDelete} style={styles.headerDeleteBtn}>
+          <Ionicons name="trash-outline" size={22} color="#dc2626" />
+        </TouchableOpacity>
+      </View>
 
-          <View style={styles.header}>
-            <Text style={styles.titulo}>Editar Produto</Text>
-            <Text style={styles.subtitulo}>Atualize as informações do produto</Text>
-          </View>
-
-          {/* IMAGEM */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Imagem do Produto</Text>
-
-            <Pressable style={styles.imageUploadArea} onPress={pickImage}>
-              {imagem ? (
-                <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />
-              ) : imagemExistente ? (
-                <Image source={{ uri: imagemExistente }} style={styles.imagemPreview} />
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Text style={styles.imagePlaceholderIcon}>📷</Text>
-                  <Text style={styles.imagePlaceholderText}>Toque para trocar imagem</Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-
-          {/* CAMPOS */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informações</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nome *</Text>
-              <TextInput style={styles.input} value={nome} onChangeText={setNome} />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Descrição</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={descricao}
-                multiline
-                onChangeText={setDescricao}
-              />
-            </View>
-
-            <View style={styles.row}>
-
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>Preço *</Text>
-                <View style={styles.priceInputContainer}>
-                  <Text style={styles.currencySymbol}>R$</Text>
-                  <TextInput
-                    style={[styles.input, styles.priceInput]}
-                    value={preco}
-                    onChangeText={setPreco}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* SECÇÃO DE IMAGEM */}
+        <View style={styles.imageCard}>
+          <Pressable style={styles.imageArea} onPress={pickImage}>
+            {imagem ? (
+              <Image source={{ uri: imagem.uri }} style={styles.image} />
+            ) : imagemExistente ? (
+              <Image source={{ uri: imagemExistente }} style={styles.image} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons name="camera-outline" size={40} color="#94a3b8" />
+                <Text style={styles.imagePlaceholderText}>Adicionar Foto</Text>
               </View>
+            )}
+            <View style={styles.imageBadge}>
+              <Ionicons name="pencil" size={14} color="#fff" />
+            </View>
+          </Pressable>
+        </View>
 
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>Estoque</Text>
+        {/* INFORMAÇÕES GERAIS */}
+        <Text style={styles.sectionLabel}>Dados do Produto</Text>
+        <View style={styles.card}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Nome do Produto *</Text>
+            <TextInput 
+              style={styles.input} 
+              value={nome} 
+              onChangeText={setNome} 
+              placeholder="Ex: Hambúrguer Artesanal"
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Descrição</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={descricao}
+              multiline
+              numberOfLines={4}
+              onChangeText={setDescricao}
+              placeholder="Detalhes sobre ingredientes, peso, etc..."
+              placeholderTextColor="#94a3b8"
+              textAlignVertical="top"
+            />
+          </View>
+        </View>
+
+        {/* VALORES E STOCK */}
+        <Text style={styles.sectionLabel}>Financeiro e Stock</Text>
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+              <Text style={styles.label}>Preço de Venda *</Text>
+              <View style={styles.adornedInput}>
+                <Text style={styles.adornment}>R$</Text>
                 <TextInput
-  style={styles.input}
-  value={estoque}
-  keyboardType="numeric"
-  onChangeText={(v) => setEstoque(normalizeEstoque(v))}
-/>
-
-              </View>
-
-            </View>
-
-            {/* Categoria */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Categoria *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker selectedValue={categoria} onValueChange={setCategoria}>
-                  {productCategoriesForForms.map((c) => (
-                    <Picker.Item key={c.id} label={c.name} value={c.id} />
-                  ))}
-                </Picker>
+                  style={styles.inputClean}
+                  value={preco}
+                  onChangeText={setPreco}
+                  keyboardType="decimal-pad"
+                  placeholder="0,00"
+                  placeholderTextColor="#94a3b8"
+                />
               </View>
             </View>
 
-            {/* Unidade */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Unidade *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker selectedValue={unidade} onValueChange={setUnidade}>
-                  {unidadeOptions.map((u) => (
-                    <Picker.Item key={u.value} label={u.label} value={u.value} />
-                  ))}
-                </Picker>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Stock Atual</Text>
+              <View style={styles.adornedInput}>
+                <Ionicons name="cube-outline" size={18} color="#94a3b8" style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.inputClean}
+                  value={estoque}
+                  keyboardType="numeric"
+                  onChangeText={(v) => setEstoque(normalizeEstoque(v))}
+                  placeholder="0"
+                  placeholderTextColor="#94a3b8"
+                />
               </View>
             </View>
-
           </View>
 
-          <Pressable style={styles.saveButton} onPress={handleSave} disabled={isSaving}>
-            {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Salvar Alterações</Text>}
-          </Pressable>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Unidade de Medida *</Text>
+            <View style={styles.pickerContainer}>
+              <Picker 
+                selectedValue={unidade} 
+                onValueChange={setUnidade}
+                style={styles.picker}
+              >
+                {unidadeOptions.map((u) => (
+                  <Picker.Item key={u.value} label={u.label} value={u.value} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        </View>
 
-          <Pressable style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>Excluir Produto</Text>
-          </Pressable>
+        {/* ORGANIZAÇÃO NO MENU */}
+        <Text style={styles.sectionLabel}>Classificação</Text>
+        <View style={styles.card}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Categoria no Menu *</Text>
+            <View style={styles.pickerContainer}>
+              <Picker 
+                selectedValue={categoria} 
+                onValueChange={setCategoria}
+                style={styles.picker}
+              >
+                {productCategoriesForForms.map((c) => (
+                  <Picker.Item key={c.id} label={c.name} value={c.id} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        </View>
 
-        </ScrollView>
-      </SafeAreaView>
+        {/* BOTÕES DE AÇÃO */}
+        <View style={styles.actionSection}>
+          <TouchableOpacity 
+            style={[styles.mainBtn, isSaving && { opacity: 0.7 }]} 
+            onPress={handleSave} 
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={22} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.mainBtnText}>Guardar Alterações</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.statusBtn, 
+              { borderColor: ativo ? "#e2e8f0" : "#dcfce7", backgroundColor: ativo ? "#fff" : "#f0fdf4" }
+            ]}
+            onPress={handleToggleStatus}
+          >
+            <Ionicons 
+              name={ativo ? "eye-off-outline" : "eye-outline"} 
+              size={20} 
+              color={ativo ? "#64748b" : "#16a34a"} 
+            />
+            <Text style={[styles.statusBtnText, { color: ativo ? "#64748b" : "#16a34a" }]}>
+              {ativo ? "Inativar Produto" : "Ativar Produto"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-
-// === estilos iguais do formulário de criação ===
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5" },
-  scrollContent: { paddingHorizontal: 16 },
-  header: { paddingTop: 20, paddingBottom: 24 },
-  titulo: { fontSize: 28, fontWeight: "700", color: "#1a1a1a" },
-  subtitulo: { color: "#666" },
-  section: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 17, fontWeight: "600", marginBottom: 12 },
-  imageUploadArea: {
-    height: 200,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: "#ddd",
-    overflow: "hidden",
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9'
   },
-  imagemPreview: { width: "100%", height: "100%" },
-  imagePlaceholder: { flex: 1, alignItems: "center", justifyContent: "center" },
-  imagePlaceholderIcon: { fontSize: 48 },
-  imagePlaceholderText: { color: "#777" },
-  inputGroup: { marginBottom: 12 },
-  label: { fontWeight: "600" },
-  input: { borderRadius: 10, backgroundColor: "#fff", padding: 12, borderWidth: 1, borderColor: "#ddd" },
-  textArea: { height: 100 },
-  row: { flexDirection: "row", gap: 12 },
-  halfWidth: { flex: 1 },
-  priceInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 10,
-    borderColor: "#ddd",
-    backgroundColor: "#fff",
-    paddingLeft: 10,
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b' },
+  backBtn: { padding: 4 },
+  headerDeleteBtn: { padding: 8, backgroundColor: '#fef2f2', borderRadius: 10 },
+
+  scrollContent: { padding: 20 },
+
+  // Secção de Imagem
+  imageCard: { alignItems: 'center', marginBottom: 24 },
+  imageArea: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: '#fff',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    borderWidth: 4,
+    borderColor: '#fff',
+    overflow: 'visible',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  currencySymbol: { fontWeight: "700" },
-  priceInput: { flex: 1, borderWidth: 0 },
-  pickerContainer: { borderWidth: 1, borderColor: "#ddd", borderRadius: 10, overflow: "hidden" },
-  picker: { height: 50 },
-  saveButton: {
-    backgroundColor: "#04b307ff",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 1,
+  image: { width: '100%', height: '100%', borderRadius: 70 },
+  imagePlaceholder: { alignItems: 'center' },
+  imagePlaceholderText: { fontSize: 11, color: '#94a3b8', fontWeight: '700', marginTop: 4 },
+  imageBadge: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: '#2563eb',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#f8fafc'
   },
-  saveButtonText: { color: "#fff", fontWeight: "700" },
-  deleteButton: {
-    backgroundColor: "#c62828ff",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 10,
-    marginBottom: 30,
+
+  // Estilo dos Cartões
+  sectionLabel: { fontSize: 11, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12, marginLeft: 4 },
+  card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 20, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  
+  // Inputs
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 8, marginLeft: 2 },
+  input: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 16, height: 50, fontSize: 15, color: '#1e293b' },
+  textArea: { height: 100, paddingTop: 12 },
+  row: { flexDirection: 'row' },
+  
+  adornedInput: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#f8fafc', 
+    borderWidth: 1, 
+    borderColor: '#e2e8f0', 
+    borderRadius: 12, 
+    paddingHorizontal: 16, 
+    height: 50 
   },
-  deleteButtonText: { color: "#fff", fontWeight: "700" },
+  adornment: { fontSize: 15, fontWeight: '700', color: '#94a3b8', marginRight: 8 },
+  inputClean: { flex: 1, height: 50, fontSize: 15, color: '#1e293b', fontWeight: '600' },
+  
+  pickerContainer: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, overflow: 'hidden' },
+  picker: { height: 50, width: '100%', color: '#1e293b' },
+
+  // Botões
+  actionSection: { marginTop: 10 },
+  mainBtn: { 
+    backgroundColor: '#16a34a', 
+    height: 56, 
+    borderRadius: 16, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    elevation: 3,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6
+  },
+  mainBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  statusBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginTop: 16, 
+    height: 50, 
+    borderRadius: 16, 
+    borderWidth: 1.5,
+    backgroundColor: '#fff'
+  },
+  statusBtnText: { marginLeft: 8, fontWeight: '700', fontSize: 14 }
 });

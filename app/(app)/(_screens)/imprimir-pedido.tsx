@@ -1,605 +1,394 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
-  Pressable,
+  TouchableOpacity,
   ScrollView,
   Alert,
   Share,
-} from "react-native"
-import { Stack, useLocalSearchParams } from "expo-router"
-import { Ionicons } from "@expo/vector-icons"
-import * as Print from "expo-print"
+  StatusBar,
+  Platform,
+} from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as Print from "expo-print";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Importação da API (Ajuste o caminho conforme o seu projeto local)
+import api from "../../../src/api/api";
 
 type PedidoItem = {
-  nome_produto: string
-  quantidade: number | string
-  preco_unitario_congelado: number | string
-}
+  nome_produto: string;
+  quantidade: number | string;
+  preco_unitario_congelado: number | string;
+};
 
 type PedidoDetalhes = {
-  id: number | string
-  nome_loja: string
-  data_hora: string
-  nome_cliente: string
-  telefone_cliente: string
-  endereco_entrega: string
-  forma_pagamento: string
-  itens: PedidoItem[]
-  valor_total: number | string
-}
+  id: number | string;
+  nome_loja: string;
+  data_hora: string;
+  nome_cliente: string;
+  telefone_cliente: string;
+  endereco_entrega: string;
+  forma_pagamento: string;
+  itens: PedidoItem[];
+  valor_total: number | string;
+};
 
-import api from "../../../src/api/api"
-
-export default function ImprimirPedidoScreen() {
-  const { id_pedido } = useLocalSearchParams<{ id_pedido: string }>()
-  const [pedido, setPedido] = useState<PedidoDetalhes | null>(null)
-  const [loading, setLoading] = useState(true)
+export default function App() {
+  const { id_pedido } = useLocalSearchParams<{ id_pedido: string }>();
+  const [pedido, setPedido] = useState<PedidoDetalhes | null>(null);
+  const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchPedido = async () => {
       try {
-        setLoading(true)
-       const response = await api.get(`/pedidos/${id_pedido}/detalhes`)
-        setPedido(response.data)
+        setLoading(true);
+        const response = await api.get(`/pedidos/${id_pedido}/detalhes`);
+        setPedido(response.data);
       } catch (error) {
-        console.error("Erro ao buscar pedido:", error)
-        Alert.alert("Erro", "Não foi possível carregar o pedido.")
+        console.error("Erro ao procurar pedido:", error);
+        Alert.alert("Erro", "Não foi possível carregar os dados para impressão.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    if (id_pedido) {
-      fetchPedido()
-    }
-  }, [id_pedido])
+    if (id_pedido) fetchPedido();
+  }, [id_pedido]);
+
+  const formatCurrency = (val: number | string) => {
+    return `R$ ${Number.parseFloat(String(val)).toFixed(2).replace(".", ",")}`;
+  };
 
   const gerarTextoDoCupom = () => {
-    if (!pedido) return ""
-
+    if (!pedido) return "";
     const itensTexto = pedido.itens
       .map(
-        (item: PedidoDetalhes["itens"][0]) =>
-          `${Number.parseInt(String(item.quantidade), 10)} und - ${item.nome_produto} - R$ ${Number.parseFloat(String(item.preco_unitario_congelado)).toFixed(2)}`,
+        (item) =>
+          `${Number.parseInt(String(item.quantidade), 10)}x ${item.nome_produto} - ${formatCurrency(item.preco_unitario_congelado)}`
       )
-      .join("\n")
+      .join("\n");
 
     return `
-━━━━━━━━━━━━━━━━━━━━━━
-${pedido.nome_loja}
-━━━━━━━━━━━━━━━━━━━━━━
+--- ${pedido.nome_loja.toUpperCase()} ---
+Pedido #${pedido.id}
+Data: ${new Date(pedido.data_hora).toLocaleString("pt-BR")}
 
-📋 Pedido #${pedido.id}
-📅 ${new Date(pedido.data_hora).toLocaleString("pt-BR")}
+CLIENTE: ${pedido.nome_cliente}
+CONTATO: ${pedido.telefone_cliente}
+ENDEREÇO: ${pedido.endereco_entrega}
+PAGAMENTO: ${pedido.forma_pagamento}
 
-👤 DADOS DO CLIENTE
-━━━━━━━━━━━━━━━━━━━━━━
-Nome: ${pedido.nome_cliente}
-Telefone: ${pedido.telefone_cliente}
-Endereço: ${pedido.endereco_entrega}
-Pagamento: ${pedido.forma_pagamento}
-
-🛒 ITENS DO PEDIDO
-━━━━━━━━━━━━━━━━━━━━━━
+ITENS:
 ${itensTexto}
 
-━━━━━━━━━━━━━━━━━━━━━━
-💰 TOTAL: R$ ${Number.parseFloat(String(pedido.valor_total)).toFixed(2)}
-━━━━━━━━━━━━━━━━━━━━━━
-    `.trim()
-  }
+TOTAL: ${formatCurrency(pedido.valor_total)}
+--------------------------
+Gerado por TrazAí Lojista
+    `.trim();
+  };
 
   const handleImprimir = async () => {
-    if (!pedido) {
-      Alert.alert("Erro", "Não há dados para imprimir.")
-      return
-    }
+    if (!pedido) return;
 
     const itensHtml = pedido.itens
       .map(
-        (item: PedidoDetalhes["itens"][0]) => `
+        (item) => `
         <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #eee;">
-            <span style="background-color: #D80032; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold; display: inline-block;">
-              ${Number.parseInt(String(item.quantidade), 10)}x
-            </span>
+          <td style="padding: 8px 0; border-bottom: 1px dashed #eee;">
+            <span style="font-weight: bold;">${item.quantidade}x</span> ${item.nome_produto}
           </td>
-          <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.nome_produto}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold; color: #D80032;">
-            R$ ${Number.parseFloat(String(item.preco_unitario_congelado)).toFixed(2)}
+          <td style="padding: 8px 0; border-bottom: 1px dashed #eee; text-align: right;">
+            ${formatCurrency(item.preco_unitario_congelado)}
           </td>
         </tr>
-      `,
+      `
       )
-      .join("")
+      .join("");
 
     const html = `
-      <!DOCTYPE html>
       <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 20px;
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-              border-bottom: 2px solid #e0e0e0;
-              padding-bottom: 20px;
-            }
-            .store-name {
-              font-size: 28px;
-              font-weight: bold;
-              margin-bottom: 10px;
-            }
-            .order-number {
-              background-color: #D80032;
-              color: white;
-              padding: 8px 16px;
-              border-radius: 20px;
-              display: inline-block;
-              font-size: 18px;
-              font-weight: bold;
-            }
-            .date {
-              color: #666;
-              margin-top: 10px;
-              font-size: 14px;
-            }
-            .section {
-              margin: 30px 0;
-            }
-            .section-title {
-              font-size: 18px;
-              font-weight: bold;
-              margin-bottom: 15px;
-              color: #333;
-            }
-            .info-row {
-              display: flex;
-              margin-bottom: 10px;
-              font-size: 14px;
-            }
-            .info-label {
-              font-weight: bold;
-              min-width: 120px;
-              color: #666;
-            }
-            .info-value {
-              color: #333;
-            }
-            .items-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 15px;
-            }
-            .items-table th {
-              background-color: #f5f5f5;
-              padding: 12px;
-              text-align: left;
-              font-weight: bold;
-              border-bottom: 2px solid #ddd;
-            }
-            .total-section {
-              background-color: #f5f5f5;
-              padding: 20px;
-              border-radius: 8px;
-              margin-top: 30px;
-              text-align: center;
-            }
-            .total-label {
-              font-size: 18px;
-              color: #666;
-              margin-bottom: 10px;
-            }
-            .total-value {
-              font-size: 32px;
-              font-weight: bold;
-              color: #D80032;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="store-name">${pedido.nome_loja}</div>
-            <div class="order-number">#${pedido.id}</div>
-            <div class="date">${new Date(pedido.data_hora).toLocaleString("pt-BR")}</div>
+        <body style="font-family: 'Courier New', Courier, monospace; padding: 20px; color: #333;">
+          <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
+            <h1 style="margin: 0; font-size: 22px;">${pedido.nome_loja}</h1>
+            <p style="margin: 5px 0;">PEDIDO #${pedido.id}</p>
+          </div>
+          <p style="font-size: 12px; text-align: center;">${new Date(pedido.data_hora).toLocaleString("pt-BR")}</p>
+          
+          <div style="margin: 20px 0; font-size: 14px;">
+            <p><strong>CLIENTE:</strong> ${pedido.nome_cliente}</p>
+            <p><strong>ENDEREÇO:</strong> ${pedido.endereco_entrega}</p>
+            <p><strong>PAGAMENTO:</strong> ${pedido.forma_pagamento}</p>
           </div>
 
-          <div class="section">
-            <div class="section-title">📋 Dados do Cliente</div>
-            <div class="info-row">
-              <div class="info-label">Nome:</div>
-              <div class="info-value">${pedido.nome_cliente}</div>
-            </div>
-            <div class="info-row">
-              <div class="info-label">Telefone:</div>
-              <div class="info-value">${pedido.telefone_cliente}</div>
-            </div>
-            <div class="info-row">
-              <div class="info-label">Endereço:</div>
-              <div class="info-value">${pedido.endereco_entrega}</div>
-            </div>
-            <div class="info-row">
-              <div class="info-label">Pagamento:</div>
-              <div class="info-value">${pedido.forma_pagamento}</div>
-            </div>
-          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+              <tr style="border-bottom: 1px solid #333;">
+                <th style="text-align: left; padding-bottom: 5px;">Item</th>
+                <th style="text-align: right; padding-bottom: 5px;">Preço</th>
+              </tr>
+            </thead>
+            <tbody>${itensHtml}</tbody>
+          </table>
 
-          <div class="section">
-            <div class="section-title">🛒 Itens do Pedido</div>
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th>Qtd</th>
-                  <th>Produto</th>
-                  <th style="text-align: right;">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itensHtml}
-              </tbody>
-            </table>
+          <div style="margin-top: 20px; text-align: right; font-size: 18px; font-weight: bold; border-top: 2px solid #333; padding-top: 10px;">
+            TOTAL: ${formatCurrency(pedido.valor_total)}
           </div>
-
-          <div class="total-section">
-            <div class="total-label">Total do Pedido</div>
-            <div class="total-value">R$ ${Number.parseFloat(String(pedido.valor_total)).toFixed(2)}</div>
-          </div>
+          
+          <p style="margin-top: 30px; text-align: center; font-size: 10px; color: #666;">
+            Obrigado pela preferência!<br/>TrazAí Plataforma de Entregas
+          </p>
         </body>
       </html>
-    `
+    `;
 
     try {
-      await Print.printAsync({ html })
+      await Print.printAsync({ html });
     } catch (error) {
-      console.error("Erro ao imprimir:", error)
-      Alert.alert("Erro", "Não foi possível imprimir o cupom.")
+      Alert.alert("Erro", "Não foi possível processar a impressão.");
     }
-  }
+  };
 
   const handleCompartilhar = async () => {
-    const textoCompleto = gerarTextoDoCupom()
-    if (!textoCompleto) {
-      Alert.alert("Erro", "Não há dados para compartilhar.")
-      return
-    }
+    const text = gerarTextoDoCupom();
+    if (!text) return;
     try {
-      await Share.share({
-        message: textoCompleto,
-        title: `Cupom Pedido #${pedido?.id}`,
-      })
+      await Share.share({ message: text, title: `Pedido #${pedido?.id}` });
     } catch (error) {
-      console.error("Erro ao compartilhar:", error)
-      Alert.alert("Erro", "Não foi possível compartilhar o cupom.")
+      Alert.alert("Erro", "Falha ao partilhar.");
     }
-  }
+  };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#D80032" />
-        <Text style={styles.loadingText}>Carregando pedido...</Text>
+      <View style={styles.centerBox}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.loadingText}>A gerar cupom...</Text>
       </View>
-    )
+    );
   }
 
   if (!pedido) {
     return (
-      <View style={styles.loadingContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color="#999" />
+      <View style={styles.centerBox}>
+        <Ionicons name="alert-circle-outline" size={60} color="#94a3b8" />
         <Text style={styles.errorText}>Pedido não encontrado.</Text>
+        <TouchableOpacity style={styles.backBtnEmpty} onPress={() => router.back()}>
+          <Text style={styles.backBtnEmptyText}>Voltar</Text>
+        </TouchableOpacity>
       </View>
-    )
+    );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: `Cupom Pedido #${pedido.id}` }} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.cupomCard}>
-          <View style={styles.header}>
-            <Ionicons name="receipt-outline" size={32} color="#D80032" />
-            <Text style={styles.cupomTitle}>{pedido.nome_loja}</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>#{pedido.id}</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* HEADER PERSONALIZADO */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={28} color="#1e293b" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Impressão de Cupom</Text>
+        <TouchableOpacity onPress={handleCompartilhar} style={styles.headerBtn}>
+          <Ionicons name="share-outline" size={24} color="#2563eb" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* RECIBO VISUAL */}
+        <View style={styles.receiptContainer}>
+          <View style={styles.receiptHeader}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="receipt" size={30} color="#2563eb" />
+            </View>
+            <Text style={styles.storeName}>{pedido.nome_loja}</Text>
+            <View style={styles.idBadge}>
+              <Text style={styles.idBadgeText}>PEDIDO #{pedido.id}</Text>
             </View>
           </View>
 
-          <View style={styles.dateContainer}>
-            <Ionicons name="calendar-outline" size={16} color="#666" />
-            <Text style={styles.dateText}>
-              {new Date(pedido.data_hora).toLocaleDateString("pt-BR")} às{" "}
-              {new Date(pedido.data_hora).toLocaleTimeString("pt-BR")}
-            </Text>
-          </View>
-
-          <View style={styles.divider} />
+          <View style={styles.dashedLine} />
 
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="person-outline" size={20} color="#D80032" />
-              <Text style={styles.sectionTitle}>Dados do Cliente</Text>
+            <Text style={styles.sectionLabel}>Dados da Entrega</Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="person-outline" size={16} color="#64748b" />
+              <Text style={styles.infoText}>{pedido.nome_cliente}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Nome:</Text>
-              <Text style={styles.infoValue}>{pedido.nome_cliente}</Text>
+              <Ionicons name="location-outline" size={16} color="#64748b" />
+              <Text style={styles.infoText} numberOfLines={2}>{pedido.endereco_entrega}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Telefone:</Text>
-              <Text style={styles.infoValue}>{pedido.telefone_cliente}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Endereço:</Text>
-              <Text style={styles.infoValue}>{pedido.endereco_entrega}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Pagamento:</Text>
-              <Text style={styles.infoValue}>{pedido.forma_pagamento}</Text>
+              <Ionicons name="wallet-outline" size={16} color="#64748b" />
+              <Text style={styles.infoText}>{pedido.forma_pagamento}</Text>
             </View>
           </View>
 
-          <View style={styles.divider} />
+          <View style={styles.dashedLine} />
 
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="cart-outline" size={20} color="#D80032" />
-              <Text style={styles.sectionTitle}>Itens do Pedido</Text>
-            </View>
-            {pedido.itens.map((item: PedidoDetalhes["itens"][0], index: number) => (
-              <View key={index} style={styles.itemCard}>
-                <View style={styles.itemHeader}>
-                  <View style={styles.quantityBadge}>
-                    <Text style={styles.quantityText}>{Number.parseInt(String(item.quantidade), 10)}x</Text>
-                  </View>
-                  <Text style={styles.itemName}>{item.nome_produto}</Text>
-                </View>
-                <Text style={styles.itemPrice}>
-                  R$ {Number.parseFloat(String(item.preco_unitario_congelado)).toFixed(2)}
-                </Text>
+            <Text style={styles.sectionLabel}>Itens do Pedido</Text>
+            {pedido.itens.map((item, index) => (
+              <View key={index} style={styles.itemRow}>
+                <Text style={styles.itemQty}>{item.quantidade}x</Text>
+                <Text style={styles.itemName} numberOfLines={1}>{item.nome_produto}</Text>
+                <Text style={styles.itemPrice}>{formatCurrency(item.preco_unitario_congelado)}</Text>
               </View>
             ))}
           </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>Total do Pedido</Text>
-            <Text style={styles.totalValue}>R$ {Number.parseFloat(String(pedido.valor_total)).toFixed(2)}</Text>
+          <View style={styles.totalBox}>
+            <Text style={styles.totalLabel}>VALOR TOTAL</Text>
+            <Text style={styles.totalValue}>{formatCurrency(pedido.valor_total)}</Text>
           </View>
+
+          <View style={styles.receiptFooter}>
+            <Text style={styles.footerText}>Gerado em {new Date(pedido.data_hora).toLocaleString("pt-BR")}</Text>
+            <Text style={styles.footerBrand}>TRAZAÍ LOJISTA</Text>
+          </View>
+          
+          {/* Efeito de recorte de papel no fundo (opcional visual) */}
+          <View style={styles.zigzag} />
         </View>
 
-        <Pressable
-          style={({ pressed }) => [styles.printButton, pressed && styles.printButtonPressed]}
-          onPress={handleImprimir}
-        >
-          <Ionicons name="print-outline" size={24} color="#fff" />
-          <Text style={styles.printButtonText}>Imprimir Cupom</Text>
-        </Pressable>
+        {/* BOTÃO DE IMPRESSÃO */}
+        <TouchableOpacity style={styles.printBtn} onPress={handleImprimir}>
+          <Ionicons name="print" size={24} color="#fff" />
+          <Text style={styles.printBtnText}>Imprimir Recibo</Text>
+        </TouchableOpacity>
 
-        <Pressable
-          style={({ pressed }) => [styles.shareButton, pressed && styles.shareButtonPressed]}
-          onPress={handleCompartilhar}
-        >
-          <Ionicons name="share-social-outline" size={24} color="#fff" />
-          <Text style={styles.shareButtonText}>Compartilhar Cupom</Text>
-        </Pressable>
+        <TouchableOpacity style={styles.shareOutlineBtn} onPress={handleCompartilhar}>
+          <Ionicons name="share-social-outline" size={20} color="#64748b" />
+          <Text style={styles.shareOutlineBtnText}>Partilhar por WhatsApp/E-mail</Text>
+        </TouchableOpacity>
+
       </ScrollView>
-    </SafeAreaView>
-  )
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#666",
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#999",
-    marginTop: 12,
-  },
-  cupomCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+  container: { flex: 1, backgroundColor: "#f1f5f9" },
+  centerBox: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
+  loadingText: { marginTop: 12, color: '#64748b', fontWeight: '600' },
+  errorText: { marginTop: 12, color: '#94a3b8', fontSize: 16, fontWeight: '600' },
+  backBtnEmpty: { marginTop: 20, backgroundColor: '#2563eb', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
+  backBtnEmptyText: { color: '#fff', fontWeight: '700' },
+
   header: {
-    alignItems: "center",
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
-  cupomTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1a1a1a",
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b' },
+  headerBtn: { padding: 8 },
+
+  scrollContent: { padding: 20 },
+
+  // Receipt Design
+  receiptContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 2, // Quase reto para parecer papel
+    padding: 24,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  badge: {
-    backgroundColor: "#D80032",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+  receiptHeader: { alignItems: 'center', marginBottom: 20 },
+  iconCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  storeName: { fontSize: 22, fontWeight: '900', color: '#1e293b', textAlign: 'center' },
+  idBadge: { backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, marginTop: 8 },
+  idBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  
+  dashedLine: { height: 1, borderStyle: 'dashed', borderWidth: 1, borderColor: '#cbd5e1', marginVertical: 20 },
+  
+  section: { marginBottom: 10 },
+  sectionLabel: { fontSize: 11, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  infoText: { flex: 1, marginLeft: 10, fontSize: 14, color: '#334155', fontWeight: '500' },
+  
+  itemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  itemQty: { width: 30, fontSize: 14, fontWeight: '800', color: '#2563eb' },
+  itemName: { flex: 1, fontSize: 14, color: '#334155', fontWeight: '500' },
+  itemPrice: { fontSize: 14, fontWeight: '700', color: '#1e293b', marginLeft: 10 },
+  
+  totalBox: { 
+    marginTop: 10, 
+    paddingTop: 20, 
+    borderTopWidth: 2, 
+    borderTopColor: '#1e293b',
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
   },
-  badgeText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+  totalLabel: { fontSize: 14, fontWeight: '800', color: '#1e293b' },
+  totalValue: { fontSize: 24, fontWeight: '900', color: '#2563eb' },
+  
+  receiptFooter: { marginTop: 30, alignItems: 'center' },
+  footerText: { fontSize: 11, color: '#94a3b8', marginBottom: 4 },
+  footerBrand: { fontSize: 12, fontWeight: '900', color: '#cbd5e1', letterSpacing: 2 },
+
+  zigzag: {
+    position: 'absolute',
+    bottom: -10,
+    left: 0,
+    right: 0,
+    height: 10,
+    backgroundColor: '#f1f5f9', // Cor do fundo da página
+    // Simulação visual de dentes de serra (limitado em RN puro, mas o contraste ajuda)
   },
-  dateContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 12,
-  },
-  dateText: {
-    fontSize: 14,
-    color: "#666",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#e0e0e0",
-    marginVertical: 20,
-  },
-  section: {
+
+  // Buttons
+  printBtn: { 
+    backgroundColor: '#2563eb', 
+    height: 60, 
+    borderRadius: 16, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
     gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-  },
-  infoRow: {
-    flexDirection: "row",
-    paddingVertical: 6,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#666",
-    width: 100,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: "#1a1a1a",
-    flex: 1,
-  },
-  itemCard: {
-    backgroundColor: "#f9f9f9",
-    padding: 12,
-    borderRadius: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  itemHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  quantityBadge: {
-    backgroundColor: "#D80032",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    minWidth: 36,
-    alignItems: "center",
-  },
-  quantityText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  itemName: {
-    fontSize: 14,
-    color: "#1a1a1a",
-    flex: 1,
-  },
-  itemPrice: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#D80032",
-  },
-  totalContainer: {
-    backgroundColor: "#f0f0f0",
-    padding: 16,
-    borderRadius: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-  },
-  totalValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#D80032",
-  },
-  printButton: {
-    flexDirection: "row",
-    gap: 10,
-    backgroundColor: "#007AFF",
-    padding: 16,
-    marginTop: 20,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#007AFF",
+    elevation: 4,
+    shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 8
   },
-  printButtonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
+  printBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  shareOutlineBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginTop: 16, 
+    padding: 15, 
+    borderRadius: 16, 
+    borderWidth: 1.5, 
+    borderColor: '#cbd5e1',
+    gap: 8
   },
-  printButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  shareButton: {
-    flexDirection: "row",
-    gap: 10,
-    backgroundColor: "#D80032",
-    padding: 16,
-    marginTop: 12,
-    marginBottom: 20,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#D80032",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  shareButtonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
-  },
-  shareButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-})
+  shareOutlineBtnText: { color: '#64748b', fontWeight: '700', fontSize: 14 }
+});

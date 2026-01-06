@@ -1,9 +1,10 @@
+"use client";
+
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
   Pressable,
   ScrollView,
@@ -11,10 +12,15 @@ import {
   TouchableOpacity,
   Linking,
   Modal,
+  StatusBar,
+  Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import api from "../../../src/api/api";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Importação da API (ajuste conforme o seu projeto)
+import api from "../../../src/api/api";
 
 interface ItemDoPedido {
   quantidade: number;
@@ -36,8 +42,9 @@ interface PedidoDetalhes {
   itens: ItemDoPedido[];
 }
 
-export default function DetalhesPedidoScreen() {
+export default function App() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id_pedido, cancelar } = useLocalSearchParams<{
     id_pedido?: string;
     cancelar?: string;
@@ -45,14 +52,13 @@ export default function DetalhesPedidoScreen() {
 
   const [pedido, setPedido] = useState<PedidoDetalhes | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
 
   const motivos = [
     "Cliente desistiu",
     "Produto indisponível",
-    "Endereço incorreto",
+    "Morada incorreta",
     "Problema no pagamento",
     "Outro motivo",
   ];
@@ -64,7 +70,7 @@ export default function DetalhesPedidoScreen() {
       const response = await api.get(`/pedidos/${id_pedido}/detalhes`);
       setPedido(response.data);
     } catch (error) {
-      console.error("Erro ao buscar detalhes do pedido:", error);
+      console.error("Erro ao procurar detalhes:", error);
       Alert.alert("Erro", "Não foi possível carregar os detalhes do pedido.");
     } finally {
       setLoading(false);
@@ -90,18 +96,17 @@ export default function DetalhesPedidoScreen() {
     if (!pedido) return;
     try {
       await api.put(`/pedidos/${pedido.id}/status`, { status: novoStatus });
-      Alert.alert("Sucesso!", `O pedido foi marcado como "${novoStatus}".`);
-
-      setPedido((pedidoAtual) =>
-        pedidoAtual ? { ...pedidoAtual, status: novoStatus } : null
-      );
+      setPedido((prev) => (prev ? { ...prev, status: novoStatus } : null));
 
       if (novoStatus === "Finalizado" || novoStatus === "Cancelado") {
-        router.back();
+        Alert.alert("Sucesso", `Pedido ${novoStatus.toLowerCase()}!`, [
+          { text: "OK", onPress: () => router.back() }
+        ]);
+      } else {
+        Alert.alert("Sucesso", `Estado atualizado para "${novoStatus}".`);
       }
     } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-      Alert.alert("Erro", "Não foi possível atualizar o status do pedido.");
+      Alert.alert("Erro", "Não foi possível atualizar o estado.");
     }
   };
 
@@ -120,429 +125,351 @@ export default function DetalhesPedidoScreen() {
       });
 
       setShowCancelModal(false);
-      Alert.alert("Pedido cancelado!", "O pedido foi cancelado com sucesso.");
-
-      setPedido((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: "Cancelado",
-              motivo_cancelamento: motivoCancelamento,
-              cancelado_por: "lojista",
-            }
-          : null
-      );
-
-      router.back();
+      Alert.alert("Cancelado", "Pedido cancelado com sucesso.", [
+        { text: "OK", onPress: () => router.back() }
+      ]);
     } catch (error) {
-      console.error(error);
-      Alert.alert("Erro", "Não foi possível cancelar o pedido.");
+      Alert.alert("Erro", "Falha ao cancelar o pedido.");
     }
   };
 
-  // Ligar para cliente
-  const ligarParaCliente = () => {
-    if (pedido?.telefone_cliente) {
-      Linking.openURL(`tel:${pedido.telefone_cliente}`);
-    }
-  };
-
-  // Abrir endereço no mapa
-  const abrirNoMapa = () => {
-    if (pedido?.endereco_entrega) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        pedido.endereco_entrega
-      )}`;
-      Linking.openURL(url);
-    }
-  };
-
-  // WhatsApp — NOVO
   const conversarWhatsApp = () => {
-    if (!pedido?.telefone_cliente) {
-      Alert.alert("Erro", "Número do cliente indisponível.");
-      return;
-    }
-
-    const phone = pedido.telefone_cliente;
-    const message = `Olá ${pedido.nome_cliente}! Estou entrando em contato sobre o pedido #${pedido.id} do TRAZAÍ.`;
-
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-
-    Linking.openURL(url).catch(() => {
-      Alert.alert("Erro", "Não foi possível abrir o WhatsApp.");
-    });
+    if (!pedido?.telefone_cliente) return;
+    const phone = pedido.telefone_cliente.replace(/\D/g, "");
+    const message = `Olá ${pedido.nome_cliente}! Sou da loja e estou a entrar em contacto sobre o seu pedido #${pedido.id}.`;
+    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    Linking.openURL(url).catch(() => Alert.alert("Erro", "Não foi possível abrir o WhatsApp."));
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
+      <View style={styles.centerBox}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.loadingText}>A carregar detalhes...</Text>
       </View>
     );
   }
 
   if (!pedido) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text>Pedido não encontrado.</Text>
+      <View style={styles.centerBox}>
+        <Ionicons name="alert-circle-outline" size={48} color="#94a3b8" />
+        <Text style={styles.loadingText}>Pedido não encontrado.</Text>
+        <TouchableOpacity style={styles.backBtnEmpty} onPress={() => router.back()}>
+          <Text style={styles.backBtnEmptyText}>Voltar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  const cancelado = pedido.status === "Cancelado";
-
-  const labelCanceladoPor = (valor?: string) => {
-    if (!valor) return "Desconhecido";
-    if (valor.toLowerCase() === "lojista") return "Lojista";
-    if (valor.toLowerCase() === "cliente") return "Cliente";
-    return valor;
-  };
+  const isCancelado = pedido.status === "Cancelado";
+  const isFinalizado = pedido.status === "Finalizado";
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: `Detalhes do Pedido #${pedido.id}` }} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      {/* CABEÇALHO PERSONALIZADO */}
+      <View style={[styles.customHeader, { paddingTop: insets.top + 10 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={28} color="#1e293b" />
+        </TouchableOpacity>
+        <View style={styles.headerTitleWrapper}>
+          <Text style={styles.headerTitle}>Detalhes do Pedido</Text>
+          <Text style={styles.headerSubtitle}>#{pedido.id}</Text>
+        </View>
+        <View style={{ width: 40 }} />
+      </View>
 
-        {/* Dados do Cliente */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dados do Cliente</Text>
-
-          <View style={styles.detailRow}>
-            <Ionicons name="person-outline" size={18} color="#555" />
-            <Text style={styles.detailText}>{pedido.nome_cliente}</Text>
-          </View>
-
-          <TouchableOpacity onPress={ligarParaCliente} style={styles.detailRow}>
-            <Ionicons name="call-outline" size={18} color="#007BFF" />
-            <Text style={[styles.detailText, styles.linkText]}>
-              {pedido.telefone_cliente}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={abrirNoMapa} style={styles.detailRow}>
-            <Ionicons name="home-outline" size={18} color="#007BFF" />
-            <Text style={[styles.detailText, styles.linkText]}>
-              {pedido.endereco_entrega}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.detailRow}>
-            <Ionicons name="card-outline" size={18} color="#555" />
-            <Text style={styles.detailText}>
-              Forma de Pagamento: {pedido.forma_pagamento}
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* CARD DE STATUS ATUAL */}
+        <View style={[styles.statusCard, isCancelado ? styles.statusCardCancel : isFinalizado ? styles.statusCardFinal : null]}>
+          <View style={styles.statusInfo}>
+            <Text style={styles.statusLabel}>Estado Atual</Text>
+            <Text style={[styles.statusValue, isCancelado && { color: '#991b1b' }, isFinalizado && { color: '#166534' }]}>
+              {pedido.status}
             </Text>
           </View>
+          <Ionicons 
+            name={isCancelado ? "close-circle" : isFinalizado ? "checkmark-circle" : "time"} 
+            size={32} 
+            color={isCancelado ? "#dc2626" : isFinalizado ? "#16a34a" : "#2563eb"} 
+          />
         </View>
 
-        {/* Itens do Pedido */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Itens do Pedido</Text>
-{pedido.itens.map((item, index) => {
+        {/* DADOS DO CLIENTE */}
+        <Text style={styles.sectionLabel}>Informações do Cliente</Text>
+        <View style={styles.card}>
+          <View style={styles.clientMainRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{pedido.nome_cliente.charAt(0).toUpperCase()}</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.clientName}>{pedido.nome_cliente}</Text>
+              <Text style={styles.clientPhone}>{pedido.telefone_cliente}</Text>
+            </View>
+          </View>
 
-  const qtd = Number(item.quantidade);
+          <View style={styles.divider} />
 
-  const quantidadeFormatada = Number.isInteger(qtd)
-    ? qtd.toString()
-    : qtd.toFixed(2).replace(".", ",");
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`tel:${pedido.telefone_cliente}`)}>
+              <Ionicons name="call" size={20} color="#2563eb" />
+              <Text style={styles.actionBtnText}>Ligar</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.actionBtn, { borderColor: '#dcfce7' }]} onPress={conversarWhatsApp}>
+              <Ionicons name="logo-whatsapp" size={20} color="#16a34a" />
+              <Text style={[styles.actionBtnText, { color: '#16a34a' }]}>WhatsApp</Text>
+            </TouchableOpacity>
+          </View>
 
-  return (
-    <View key={index} style={styles.itemRow}>
-      <Text style={styles.itemQty}>
-        {quantidadeFormatada}x
-      </Text>
+          <View style={styles.divider} />
 
-      <Text style={styles.itemName}>{item.nome_produto}</Text>
-
-      <Text style={styles.itemPrice}>
-        R$ {parseFloat(item.preco_unitario_congelado).toFixed(2)}
-      </Text>
-    </View>
-  );
-})}
-
+          <TouchableOpacity style={styles.addressRow} onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pedido.endereco_entrega)}`)}>
+            <View style={styles.addressIconBg}>
+              <Ionicons name="location" size={18} color="#64748b" />
+            </View>
+            <Text style={styles.addressText}>{pedido.endereco_entrega}</Text>
+            <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
+          </TouchableOpacity>
         </View>
 
-        {/* Total */}
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Total do Pedido:</Text>
-          <Text style={styles.totalValue}>
-            R$ {parseFloat(pedido.valor_total).toFixed(2)}
-          </Text>
-        </View>
-
-        {/* Cancelamento */}
-        {cancelado && (
-          <View style={[styles.section, styles.cancelSection]}>
-            <Text style={styles.sectionTitle}>Informações de Cancelamento</Text>
-
-            <View style={styles.detailRow}>
-              <Ionicons name="close-circle-outline" size={20} color="#dc3545" />
-              <Text style={[styles.detailText, styles.cancelStatusText]}>
-                Este pedido foi cancelado.
+        {/* ITENS DO PEDIDO */}
+        <Text style={styles.sectionLabel}>Itens do Pedido</Text>
+        <View style={styles.card}>
+          {pedido.itens.map((item, index) => (
+            <View key={index} style={[styles.itemRow, index === pedido.itens.length - 1 && { borderBottomWidth: 0 }]}>
+              <View style={styles.qtyBox}>
+                <Text style={styles.qtyText}>{item.quantidade}x</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.itemName}>{item.nome_produto}</Text>
+                <Text style={styles.itemUnit}>R$ {parseFloat(item.preco_unitario_congelado).toFixed(2).replace('.', ',')} / un</Text>
+              </View>
+              <Text style={styles.itemSubtotal}>
+                R$ {(item.quantidade * parseFloat(item.preco_unitario_congelado)).toFixed(2).replace('.', ',')}
               </Text>
             </View>
+          ))}
+          
+          <View style={styles.paymentInfoRow}>
+            <Ionicons name="wallet-outline" size={16} color="#64748b" />
+            <Text style={styles.paymentMethodLabel}>Pagamento via {pedido.forma_pagamento}</Text>
+          </View>
+        </View>
 
-            {pedido.cancelado_por && (
-              <View style={styles.detailRow}>
-                <Ionicons name="person-outline" size={18} color="#555" />
-                <Text style={styles.detailText}>
-                  Cancelado por: {labelCanceladoPor(pedido.cancelado_por)}
-                </Text>
-              </View>
-            )}
+        {/* RESUMO FINANCEIRO */}
+        <View style={styles.totalCard}>
+          <Text style={styles.totalLabel}>Total do Pedido</Text>
+          <Text style={styles.totalValue}>R$ {parseFloat(pedido.valor_total).toFixed(2).replace('.', ',')}</Text>
+        </View>
 
+        {/* SECÇÃO DE CANCELAMENTO (SE APLICÁVEL) */}
+        {isCancelado && (
+          <View style={styles.cancelNoticeCard}>
+            <View style={styles.cancelHeader}>
+              <Ionicons name="alert-circle" size={20} color="#be123c" />
+              <Text style={styles.cancelTitle}>Pedido Cancelado</Text>
+            </View>
+            <Text style={styles.cancelInfo}>
+              Cancelado por: <Text style={{ fontWeight: '700' }}>{pedido.cancelado_por || "Sistema"}</Text>
+            </Text>
             {pedido.motivo_cancelamento && (
-              <View style={styles.detailRow}>
-                <Ionicons name="alert-circle-outline" size={18} color="#555" />
-                <Text style={styles.detailText}>
-                  Motivo: {pedido.motivo_cancelamento}
-                </Text>
-              </View>
+              <Text style={styles.cancelReason}>Motivo: {pedido.motivo_cancelamento}</Text>
             )}
           </View>
         )}
 
-        {/* GERIR PEDIDO */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gerir Pedido</Text>
+        {/* BOTÕES DE GESTÃO (APENAS SE NÃO CANCELADO/FINALIZADO) */}
+        {!isCancelado && !isFinalizado && (
+          <View style={styles.managementSection}>
+            <Text style={styles.sectionLabel}>Ações de Gestão</Text>
+            
+            {pedido.status === "Recebido" && (
+              <TouchableOpacity style={styles.btnPrimary} onPress={() => handleAtualizarStatus("Preparando")}>
+                <Text style={styles.btnPrimaryText}>Iniciar Preparação</Text>
+                <Ionicons name="play-circle" size={22} color="#fff" />
+              </TouchableOpacity>
+            )}
 
-          <View style={styles.statusContainer}>
-            <Text style={styles.pedidoStatus}>
-              Status Atual: {pedido.status}
-            </Text>
+            {pedido.status === "Preparando" && (
+              <TouchableOpacity style={styles.btnPrimary} onPress={() => handleAtualizarStatus("A caminho")}>
+                <Text style={styles.btnPrimaryText}>Despachar para Entrega</Text>
+                <Ionicons name="bicycle" size={22} color="#fff" />
+              </TouchableOpacity>
+            )}
+
+            {pedido.status === "A caminho" && (
+              <TouchableOpacity style={[styles.btnPrimary, { backgroundColor: '#16a34a' }]} onPress={() => handleAtualizarStatus("Finalizado")}>
+                <Text style={styles.btnPrimaryText}>Confirmar Entrega / Finalizar</Text>
+                <Ionicons name="checkmark-done-circle" size={22} color="#fff" />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.btnCancelOutline} onPress={() => setShowCancelModal(true)}>
+              <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
+              <Text style={styles.btnCancelText}>Cancelar Pedido</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* WhatsApp - NOVO */}
-          <TouchableOpacity
-            style={styles.whatsappButton}
-            onPress={conversarWhatsApp}
-          >
-            <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-            <Text style={styles.whatsappButtonText}>
-              Conversar com o Cliente
-            </Text>
-          </TouchableOpacity>
-
-          {/* Ações de status */}
-          {!cancelado && pedido.status === "Recebido" && (
-            <Pressable
-              style={styles.actionButton}
-              onPress={() => handleAtualizarStatus("Preparando")}
-            >
-              <Text style={styles.actionButtonText}>
-                Marcar como "Preparando"
-              </Text>
-            </Pressable>
-          )}
-
-          {!cancelado && pedido.status === "Preparando" && (
-            <Pressable
-              style={styles.actionButton}
-              onPress={() => handleAtualizarStatus("A caminho")}
-            >
-              <Text style={styles.actionButtonText}>
-                Marcar como "A caminho"
-              </Text>
-            </Pressable>
-          )}
-
-          {!cancelado && pedido.status === "A caminho" && (
-            <Pressable
-              style={[styles.actionButton, styles.finalizarButton]}
-              onPress={() => handleAtualizarStatus("Finalizado")}
-            >
-              <Text style={styles.actionButtonText}>Finalizar Pedido</Text>
-            </Pressable>
-          )}
-
-          {/* Cancelar */}
-          {pedido.status !== "Finalizado" && !cancelado && (
-            <Pressable
-              style={[styles.actionButton, styles.cancelarButton]}
-              onPress={() => setShowCancelModal(true)}
-            >
-              <Text style={styles.actionButtonText}>Cancelar Pedido</Text>
-            </Pressable>
-          )}
-        </View>
+        )}
       </ScrollView>
 
-      {/* Modal */}
-      <Modal visible={showCancelModal} transparent animationType="slide">
+      {/* MODAL DE CANCELAMENTO */}
+      <Modal visible={showCancelModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Cancelar Pedido</Text>
-            <Text style={styles.modalSubtitle}>
-              Selecione o motivo do cancelamento:
-            </Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cancelar Pedido</Text>
+              <TouchableOpacity onPress={() => setShowCancelModal(false)}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.modalSubtitle}>Por favor, indique o motivo do cancelamento deste pedido:</Text>
 
             {motivos.map((m) => (
-              <Pressable
+              <TouchableOpacity
                 key={m}
-                style={[
-                  styles.motivoOption,
-                  motivoCancelamento === m && styles.motivoOptionSelected,
-                ]}
+                style={[styles.reasonOption, motivoCancelamento === m && styles.reasonOptionSelected]}
                 onPress={() => setMotivoCancelamento(m)}
               >
-                <Text style={styles.motivoText}>{m}</Text>
-              </Pressable>
+                <View style={[styles.radio, motivoCancelamento === m && styles.radioActive]} />
+                <Text style={[styles.reasonText, motivoCancelamento === m && styles.reasonTextActive]}>{m}</Text>
+              </TouchableOpacity>
             ))}
 
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={styles.modalCancelButton}
-                onPress={() => {
-                  setShowCancelModal(false);
-                  setMotivoCancelamento("");
-                }}
-              >
-                <Text style={styles.modalCancelText}>Voltar</Text>
-              </Pressable>
-
-              <Pressable
-                style={styles.modalConfirmButton}
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity style={styles.modalBackBtn} onPress={() => setShowCancelModal(false)}>
+                <Text style={styles.modalBackBtnText}>Voltar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalConfirmBtn, !motivoCancelamento && { opacity: 0.5 }]} 
                 onPress={confirmarCancelamento}
+                disabled={!motivoCancelamento}
               >
-                <Text style={styles.modalConfirmText}>Confirmar</Text>
-              </Pressable>
+                <Text style={styles.modalConfirmBtnText}>Confirmar</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  centerBox: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
+  loadingText: { marginTop: 12, color: '#64748b', fontWeight: '600' },
+  backBtnEmpty: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#2563eb', borderRadius: 12 },
+  backBtnEmptyText: { color: '#fff', fontWeight: '700' },
+
+  // Custom Header
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9'
+  },
+  headerTitleWrapper: { alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b' },
+  headerSubtitle: { fontSize: 12, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' },
+  backBtn: { padding: 4 },
+
   scrollContent: { padding: 20 },
-  section: {
-    backgroundColor: "#fff",
+
+  // Status Card
+  statusCard: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 24,
     padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-    elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#dbeafe'
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    paddingBottom: 10,
-  },
-  detailRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  detailText: { fontSize: 16, marginLeft: 10, flex: 1 },
-  linkText: { color: "#007BFF" },
-  itemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  itemQty: { fontSize: 16, fontWeight: "bold", flex: 0.15 },
-  itemName: { fontSize: 16, flex: 0.6 },
-  itemPrice: { fontSize: 16, flex: 0.25, textAlign: "right" },
-  totalContainer: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    elevation: 2,
-    marginBottom: 20,
-  },
-  totalLabel: { fontSize: 18, fontWeight: "bold" },
-  totalValue: { fontSize: 22, fontWeight: "bold", color: "#28a745" },
-  statusContainer: {
-    marginBottom: 15,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    backgroundColor: "#e0eefd",
-    borderRadius: 15,
-    alignSelf: "flex-start",
-  },
-  pedidoStatus: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#005a9c",
-  },
+  statusCardCancel: { backgroundColor: '#fef2f2', borderColor: '#fee2e2' },
+  statusCardFinal: { backgroundColor: '#f0fdf4', borderColor: '#dcfce7' },
+  statusInfo: { flex: 1 },
+  statusLabel: { fontSize: 11, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 },
+  statusValue: { fontSize: 20, fontWeight: '800', color: '#2563eb' },
 
-  /* WHATSAPP BUTTON */
-  whatsappButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#25D366",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  whatsappButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
+  // Cards & Sections
+  sectionLabel: { fontSize: 12, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, marginLeft: 4 },
+  card: { backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 24, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 10 },
+  divider: { height: 1, backgroundColor: '#f1f5f9', marginVertical: 16 },
 
-  actionButton: {
-    backgroundColor: "#007BFF",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  finalizarButton: { backgroundColor: "#28a745" },
-  cancelarButton: { backgroundColor: "#dc3545" },
-  actionButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  // Client Details
+  clientMainRow: { flexDirection: 'row', alignItems: 'center' },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1e293b', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  clientName: { fontSize: 17, fontWeight: '800', color: '#1e293b' },
+  clientPhone: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  
+  actionRow: { flexDirection: 'row', gap: 12 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 44, borderRadius: 12, borderWidth: 1.5, borderColor: '#eff6ff' },
+  actionBtnText: { marginLeft: 8, fontWeight: '700', color: '#2563eb', fontSize: 13 },
+  
+  addressRow: { flexDirection: 'row', alignItems: 'center' },
+  addressIconBg: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  addressText: { flex: 1, fontSize: 14, color: '#475569', lineHeight: 20 },
 
-  /* Cancelamento */
-  cancelSection: { borderLeftWidth: 4, borderLeftColor: "#dc3545" },
-  cancelStatusText: { color: "#dc3545", fontWeight: "600" },
+  // Items
+  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  qtyBox: { width: 34, height: 34, borderRadius: 8, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
+  qtyText: { fontSize: 13, fontWeight: '800', color: '#1e293b' },
+  itemName: { fontSize: 15, fontWeight: '700', color: '#334155' },
+  itemUnit: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+  itemSubtotal: { fontSize: 15, fontWeight: '800', color: '#1e293b' },
+  paymentInfoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
+  paymentMethodLabel: { fontSize: 12, color: '#64748b', fontWeight: '600', marginLeft: 6 },
 
-  /* Modal */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalBox: { width: "85%", backgroundColor: "#fff", padding: 20, borderRadius: 12 },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-  modalSubtitle: { fontSize: 16, marginBottom: 15, color: "#555" },
-  motivoOption: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#f2f2f2",
-    marginBottom: 10,
-  },
-  motivoOptionSelected: { backgroundColor: "#cfe2ff" },
-  motivoText: { fontSize: 16 },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
-  },
-  modalCancelButton: {
-    padding: 12,
-    backgroundColor: "#ddd",
-    borderRadius: 8,
-    width: "45%",
-    alignItems: "center",
-  },
-  modalConfirmButton: {
-    padding: 12,
-    backgroundColor: "#d93025",
-    borderRadius: 8,
-    width: "45%",
-    alignItems: "center",
-  },
-  modalCancelText: { fontSize: 16, color: "#555" },
-  modalConfirmText: { fontSize: 16, color: "#fff", fontWeight: "bold" },
+  // Total Card
+  totalCard: { backgroundColor: '#1e293b', borderRadius: 24, padding: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  totalLabel: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.6)' },
+  totalValue: { fontSize: 24, fontWeight: '800', color: '#fff' },
+
+  // Management Section
+  managementSection: { marginTop: 10 },
+  btnPrimary: { backgroundColor: '#2563eb', height: 56, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, elevation: 4, shadowColor: '#2563eb', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+  btnPrimaryText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  btnCancelOutline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52, borderRadius: 16, borderWidth: 1.5, borderColor: '#fee2e2', marginTop: 16, gap: 8 },
+  btnCancelText: { color: '#dc2626', fontWeight: '700' },
+
+  // Cancel Notice Card
+  cancelNoticeCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, borderLeftWidth: 4, borderLeftColor: '#be123c', marginBottom: 24 },
+  cancelHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  cancelTitle: { fontSize: 15, fontWeight: '800', color: '#be123c' },
+  cancelInfo: { fontSize: 13, color: '#4b5563' },
+  cancelReason: { fontSize: 13, color: '#991b1b', marginTop: 6, fontWeight: '600', fontStyle: 'italic' },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.6)", justifyContent: "center", padding: 24 },
+  modalBox: { backgroundColor: "#fff", borderRadius: 32, padding: 24, elevation: 12 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: "800", color: "#1e293b" },
+  modalSubtitle: { fontSize: 14, color: "#64748b", marginBottom: 20, lineHeight: 20 },
+  reasonOption: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16, backgroundColor: '#f8fafc', marginBottom: 8, borderWidth: 1, borderColor: '#f1f5f9' },
+  reasonOptionSelected: { backgroundColor: '#fef2f2', borderColor: '#fee2e2' },
+  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: '#cbd5e1', marginRight: 12 },
+  radioActive: { borderColor: '#dc2626', backgroundColor: '#dc2626' },
+  reasonText: { fontSize: 15, color: '#475569', fontWeight: '600' },
+  reasonTextActive: { color: '#991b1b' },
+  modalActionRow: { flexDirection: 'row', gap: 12, marginTop: 24 },
+  modalBackBtn: { flex: 1, height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9' },
+  modalBackBtnText: { fontWeight: '700', color: '#64748b' },
+  modalConfirmBtn: { flex: 1.5, height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#dc2626' },
+  modalConfirmBtnText: { fontWeight: '800', color: '#fff' }
 });

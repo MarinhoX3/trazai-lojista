@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
@@ -7,15 +9,18 @@ import {
   ActivityIndicator,
   Pressable,
   TextInput,
-  SafeAreaView,
   Image,
   Dimensions,
   TouchableOpacity,
+  StatusBar,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Importações de API e Contexto
 import api, { ASSET_BASE_URL } from "../../../src/api/api";
 import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface Produto {
   id: number;
@@ -26,13 +31,15 @@ interface Produto {
 }
 
 const { width } = Dimensions.get("window");
-const ITEM_MARGIN = 10;
-const NUM_COLUMNS = 2;
-const ITEM_WIDTH = (width - ITEM_MARGIN * (NUM_COLUMNS + 1)) / NUM_COLUMNS;
+const NUM_COLUMNS = 3;
+const CARD_MARGIN = 8;
+const CONTAINER_PADDING = 16;
+// Cálculo preciso para 3 colunas considerando as margens laterais e entre os cards
+const CARD_WIDTH = (width - (CONTAINER_PADDING * 2) - (CARD_MARGIN * (NUM_COLUMNS - 1) * 2)) / NUM_COLUMNS;
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { loja, updateAuthLoja } = useAuthLoja(); // ✅ Agora pegamos updateAuthLoja
+  const { loja, updateAuthLoja } = useAuthLoja();
   const insets = useSafeAreaInsets();
 
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -43,7 +50,6 @@ export default function DashboardScreen() {
   const [salvandoRaio, setSalvandoRaio] = useState(false);
   const [mensagemSalva, setMensagemSalva] = useState("");
 
-  // 🔹 Atualiza o raio assim que a loja for carregada
   useEffect(() => {
     if (loja && loja.raio_entrega_km != null) {
       setRaioEntrega(loja.raio_entrega_km);
@@ -56,9 +62,7 @@ export default function DashboardScreen() {
       const response = await api.get(`/produtos?id_loja=${loja.id}`);
       setProdutos(response.data);
     } catch (error) {
-      console.error("Erro ao buscar produtos:", error);
-    } finally {
-      setLoading(false);
+      console.error("Erro ao procurar produtos:", error);
     }
   }, [loja?.id]);
 
@@ -68,7 +72,7 @@ export default function DashboardScreen() {
       const response = await api.get(`/pedidos/loja/${loja.id}/pedidos/count`);
       setContagemPedidos(response.data.count || 0);
     } catch (error) {
-      console.error("Erro ao buscar contagem de pedidos:", error);
+      console.error("Erro ao procurar contagem de pedidos:", error);
       setContagemPedidos(0);
     }
   }, [loja?.id]);
@@ -82,23 +86,21 @@ export default function DashboardScreen() {
     }, [fetchProdutos, fetchContagemPedidos])
   );
 
-  // ✅ Função para salvar o novo raio de entrega
   const handleSalvarRaio = async () => {
     if (!loja?.id || raioEntrega === null) return;
     try {
       setSalvandoRaio(true);
       await api.put(`/lojas/${loja.id}`, { raio_entrega_km: raioEntrega });
-      setMensagemSalva("Raio atualizado com sucesso!");
+      setMensagemSalva("Atualizado!");
 
-      // ✅ Atualiza o contexto local da loja
       if (updateAuthLoja) {
         updateAuthLoja({ raio_entrega_km: raioEntrega });
       }
 
       setTimeout(() => setMensagemSalva(""), 3000);
     } catch (error) {
-      console.error("Erro ao salvar raio:", error);
-      setMensagemSalva("Erro ao salvar o raio.");
+      console.error("Erro ao guardar o raio:", error);
+      setMensagemSalva("Erro!");
     } finally {
       setSalvandoRaio(false);
     }
@@ -113,9 +115,9 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF0000" />
-        <Text style={styles.loadingText}>A carregar produtos...</Text>
+      <View style={styles.containerCentered}>
+        <ActivityIndicator size="large" color="#1E3A8A" />
+        <Text style={styles.loadingText}>Sincronizando dados...</Text>
       </View>
     );
   }
@@ -123,88 +125,46 @@ export default function DashboardScreen() {
   const renderItem = ({ item }: { item: Produto }) => {
     const imageUrl = item.url_foto
       ? `${ASSET_BASE_URL}/${item.url_foto}?t=${new Date().getTime()}`
-      : "https://placehold.co/400x300/e2e8f0/e2e8f0?text=Sem+Imagem";
+      : "https://placehold.co/200x200/f1f5f9/94a3b8?text=Sem+Foto";
 
-    const estoqueNumerico = Number.parseInt(item.estoque, 10);
-    const estoqueCor = estoqueNumerico <= 5 ? "red" : "#666";
+    const estoqueNumerico = parseInt(item.estoque, 10);
+    const lowStock = estoqueNumerico <= 5;
 
     return (
       <Pressable
         style={styles.produtoCard}
-        onPress={() =>
-          router.push({ pathname: "/edit-product", params: { ...item } })
-        }
+        onPress={() => router.push({ pathname: "/edit-product", params: { ...item } })}
       >
-        <Image source={{ uri: imageUrl }} style={styles.produtoCardImagem} />
-        <View style={styles.produtoCardInfo}>
-          <Text style={styles.produtoCardNome} numberOfLines={1}>
-            {item.nome}
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: imageUrl }} style={styles.produtoImagem} />
+          {lowStock && <View style={styles.dotLowStock} />}
+        </View>
+        
+        <View style={styles.produtoInfo}>
+          <Text style={styles.produtoNome} numberOfLines={1}>{item.nome}</Text>
+          <Text style={styles.produtoPreco}>R$ {item.preco}</Text>
+          <Text style={[styles.estoqueText, lowStock && styles.lowStockText]}>
+            {estoqueNumerico} un.
           </Text>
-          <View style={styles.precoEstoqueContainer}>
-            <Text style={styles.produtoCardPreco}>R$ {item.preco}</Text>
-            <Text
-              style={[styles.produtoCardEstoque, { color: estoqueCor }]}
-            >{`Estoque: ${estoqueNumerico} und`}</Text>
-          </View>
         </View>
       </Pressable>
     );
   };
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.dashboardHeader}>
-        <Text style={styles.dashboardTitle}>Painel da Loja</Text>
-        <Text style={styles.dashboardSubtitle}>
-          Pedidos ativos: {contagemPedidos}
-        </Text>
-      </View>
-
-      {/* 🧭 Raio de Entrega */}
-      <View style={styles.raioContainer}>
-        <Text style={styles.raioLabel}>Raio de Entrega (km):</Text>
-        <TextInput
-          style={styles.raioInput}
-          keyboardType="numeric"
-          value={raioEntrega?.toString() ?? ""}
-          onChangeText={(value) => setRaioEntrega(parseFloat(value) || 0)}
-          onBlur={handleSalvarRaio} // ✅ Correção aqui
-          editable={!salvandoRaio}
-        />
-        {salvandoRaio && <ActivityIndicator size="small" color="#FF0000" />}
-      </View>
-
-      {mensagemSalva ? (
-        <Text
-          style={{
-            color: mensagemSalva.includes("Erro") ? "red" : "#008000",
-            fontSize: 13,
-            textAlign: "center",
-            marginBottom: 5,
-          }}
-        >
-          {mensagemSalva}
-        </Text>
-      ) : null}
-
-      <View style={styles.topControls}>
-        <TextInput
-          style={styles.barraBusca}
-          placeholder="Buscar produto..."
-          placeholderTextColor="#888"
-          value={termoBusca}
-          onChangeText={setTermoBusca}
-        />
-        <TouchableOpacity
-          style={styles.botaoAdicionar}
-          onPress={() =>
-            router.push({
-              pathname: "/create-product",
-              params: { lojaId: loja?.id },
-            })
-          }
-        >
-          <Text style={styles.botaoTexto}>+ Adicionar Produto</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* HEADER PREMIUM */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View>
+          <Text style={styles.welcomeText}>Gestão de Negócio</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {loja?.nome_loja || "Dashboard"}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.profileBtn} onPress={() => router.push("/edit-loja")}>
+          <Ionicons name="options-outline" size={22} color="#1E3A8A" />
         </TouchableOpacity>
       </View>
 
@@ -213,104 +173,178 @@ export default function DashboardScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
         numColumns={NUM_COLUMNS}
-        columnWrapperStyle={styles.row}
-        ListEmptyComponent={
-          <Text style={styles.emptyListText}>
-            Nenhum produto encontrado. Clique em "Adicionar Produto" para
-            começar!
-          </Text>
+        ListHeaderComponent={
+          <View style={styles.headerContent}>
+            {/* KPI CARDS ROW */}
+            <View style={styles.kpiRow}>
+              <View style={styles.statsCard}>
+                <View style={styles.statsIconBg}>
+                  <Ionicons name="cart" size={20} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.statsLabel}>Pedidos</Text>
+                  <Text style={styles.statsValue}>{contagemPedidos}</Text>
+                </View>
+              </View>
+
+              {/* QUICK RADIUS SETTING */}
+              <View style={styles.radiusMiniCard}>
+                <View style={styles.radiusHeader}>
+                  <Text style={styles.radiusLabel}>Raio Entrega</Text>
+                  {salvandoRaio && <ActivityIndicator size="small" color="#1E3A8A" />}
+                </View>
+                <View style={styles.radiusInputRow}>
+                  <TextInput
+                    style={styles.raioInput}
+                    keyboardType="numeric"
+                    value={raioEntrega?.toString() ?? ""}
+                    onChangeText={(value) => setRaioEntrega(parseFloat(value) || 0)}
+                    onBlur={handleSalvarRaio}
+                    editable={!salvandoRaio}
+                  />
+                  <Text style={styles.kmLabel}>KM</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* SEARCH & ADD ROW */}
+            <View style={styles.searchSection}>
+              <View style={styles.searchWrapper}>
+                <Ionicons name="search" size={18} color="#94a3b8" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Buscar no estoque..."
+                  placeholderTextColor="#94a3b8"
+                  value={termoBusca}
+                  onChangeText={setTermoBusca}
+                />
+              </View>
+              <TouchableOpacity 
+                style={styles.addButton}
+                onPress={() => router.push({ pathname: "/create-product", params: { lojaId: loja?.id } })}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.sectionTitle}>Produtos ({produtosFiltrados.length})</Text>
+          </View>
         }
-        contentContainerStyle={styles.listaContentContainer}
+        columnWrapperStyle={styles.columnRow}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="cube-outline" size={48} color="#e2e8f0" />
+            <Text style={styles.emptyText}>Nenhum item disponível.</Text>
+          </View>
+        }
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F7F7" },
-  dashboardHeader: { alignItems: "center", marginTop: 10 },
-  dashboardTitle: { fontSize: 25, fontWeight: "bold", color: "#000000ff" },
-  dashboardSubtitle: { fontSize: 15, color: "#000000ff", marginTop: 4 },
-  raioContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 10,
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  containerCentered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#fff' },
+  loadingText: { marginTop: 12, color: '#64748b', fontWeight: '500' },
+  
+  // Header
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: CONTAINER_PADDING, 
+    paddingBottom: 15,
+    backgroundColor: '#fff',
   },
-  raioLabel: { fontSize: 16, color: "#000000ff", marginRight: 10 },
-  raioInput: {
-    backgroundColor: "#FFF",
-    borderRadius: 8,
+  welcomeText: { fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  headerTitle: { fontSize: 22, fontWeight: '900', color: '#1E3A8A' },
+  profileBtn: { width: 44, height: 44, backgroundColor: '#F1F5F9', borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+
+  // Content
+  listContent: { paddingBottom: 40 },
+  headerContent: { paddingHorizontal: CONTAINER_PADDING, paddingTop: 10 },
+  columnRow: { justifyContent: 'flex-start', paddingHorizontal: CONTAINER_PADDING - CARD_MARGIN },
+
+  // KPI & Radius Row
+  kpiRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  statsCard: { 
+    flex: 1.2,
+    backgroundColor: '#1E3A8A', 
+    borderRadius: 18, 
+    padding: 12, 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    marginRight: 10,
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5
+  },
+  statsIconBg: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  statsLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+  statsValue: { color: '#fff', fontSize: 20, fontWeight: '900' },
+
+  radiusMiniCard: { 
+    flex: 1,
+    backgroundColor: '#F8FAF6', 
+    borderRadius: 18, 
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#DDD",
-    width: 70,
-    textAlign: "center",
-    fontSize: 16,
-    color: "#000000ff",
-    padding: 5,
+    borderColor: '#E2E8F0'
   },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 10, fontSize: 16, color: "#333" },
-  topControls: {
-    paddingHorizontal: ITEM_MARGIN,
-    marginBottom: 20,
-    width: "100%",
-    alignItems: "center",
+  radiusHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  radiusLabel: { color: '#64748b', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+  radiusInputRow: { flexDirection: 'row', alignItems: 'baseline' },
+  raioInput: { fontSize: 20, fontWeight: '900', color: '#1E3A8A', marginRight: 4, minWidth: 30 },
+  kmLabel: { fontSize: 10, fontWeight: '800', color: '#94a3b8' },
+
+  // Search & Add
+  searchSection: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
+  searchWrapper: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F1F5F9', 
+    borderRadius: 15, 
+    paddingHorizontal: 15, 
+    height: 48,
+    marginRight: 10
   },
-  barraBusca: {
-    height: 50,
-    backgroundColor: "#fff",
-    borderRadius: 25,
-    width: "100%",
-    paddingHorizontal: 20,
-    fontSize: 16,
-    color: "#333",
-    elevation: 3,
-    marginBottom: 10,
-  },
-  botaoAdicionar: {
-    backgroundColor: "#1c9cd7ff",
-    paddingVertical: 15,
-    borderRadius: 25,
-    width: "100%",
-    alignItems: "center",
-    elevation: 5,
-  },
-  botaoTexto: { color: "#fff", fontSize: 17, fontWeight: "bold" },
-  listaContentContainer: { paddingBottom: 100, paddingHorizontal: ITEM_MARGIN },
-  row: { justifyContent: "space-between", marginBottom: ITEM_MARGIN },
-  produtoCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    width: ITEM_WIDTH,
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '500', color: '#1E3A8A' },
+  addButton: { width: 48, height: 48, backgroundColor: '#1E3A8A', borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#000000ff', marginBottom: 15 },
+
+  // 3 Column Grid Cards
+  produtoCard: { 
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    width: CARD_WIDTH, 
+    margin: CARD_MARGIN,
+    marginBottom: 16,
+    // Sombra suave estilo Apple/Premium
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
     elevation: 3,
-    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: '#F1F5F9',
+    overflow: 'hidden'
   },
-  produtoCardImagem: {
-    width: "100%",
-    height: ITEM_WIDTH * 0.75,
-    resizeMode: "cover",
-  },
-  produtoCardInfo: { padding: 10 },
-  produtoCardNome: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
-  },
-  precoEstoqueContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  produtoCardPreco: { fontSize: 14, color: "#15a232ff", fontWeight: "600" },
-  produtoCardEstoque: { fontSize: 12, fontWeight: "bold" },
-  emptyListText: { fontSize: 16, color: "#666", textAlign: "center" },
+  imageContainer: { width: '100%', height: CARD_WIDTH, position: 'relative', backgroundColor: '#F8FAF6' },
+  produtoImagem: { width: '100%', height: '100%', resizeMode: 'cover' },
+  dotLowStock: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
+  
+  produtoInfo: { padding: 8 },
+  produtoNome: { fontSize: 11, fontWeight: '700', color: '#000000ff', marginBottom: 2 },
+  produtoPreco: { fontSize: 13, fontWeight: '900', color: '#04b71cff', marginBottom: 4 },
+  estoqueText: { fontSize: 12, color: '#94a3b8', fontWeight: '600' },
+  lowStockText: { color: '#EF4444' },
+
+  emptyContainer: { padding: 40, alignItems: 'center' },
+  emptyText: { marginTop: 10, color: '#94a3b8', fontSize: 13, fontWeight: '500' }
 });

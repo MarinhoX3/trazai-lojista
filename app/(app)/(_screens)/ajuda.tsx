@@ -53,6 +53,28 @@ export default function AjudaScreen() {
           </Text>
         </View>
 
+<View style={styles.section}>
+  <View style={styles.sectionHeader}>
+    <Ionicons name="card" size={24} color="#DC2626" />
+    <Text style={styles.sectionTitle}>Formas de pagamento aceitas</Text>
+  </View>
+
+  <Text style={styles.sectionText}>
+    A loja pode escolher quais meios de pagamento deseja disponibilizar no app.
+  </Text>
+
+  <Text style={styles.sectionText}>As opções são:</Text>
+
+  <Text style={styles.sectionText}>• Pix direto para a loja</Text>
+  <Text style={styles.sectionText}>• Dinheiro na entrega</Text>
+  <Text style={styles.sectionText}>• Cartão no app (Stripe)</Text>
+  <Text style={styles.sectionText}>• Cartão na maquininha do lojista</Text>
+
+  <Text style={[styles.sectionText, { marginTop: 8 }]}>
+    O cliente só verá no aplicativo as opções que a sua loja ativar no painel.
+  </Text>
+</View>
+
         {/* VANTAGENS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -72,7 +94,8 @@ export default function AjudaScreen() {
 
           <View style={styles.bulletPoint}>
             <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
-            <Text style={styles.bulletText}>Pagamentos com cartão descontam comissão automaticamente</Text>
+            <Text style={styles.bulletText}>💳 Aceite pagamentos de 4 formas: Pix, 
+              Dinheiro, Cartão no app e Cartão na maquininha do lojista</Text>
           </View>
 
           <View style={styles.bulletPoint}>
@@ -119,6 +142,36 @@ export default function AjudaScreen() {
             <Text style={styles.paymentDays}>D+2</Text>
             <Text style={styles.paymentDescription}>Liquidação entre bancos.</Text>
           </View>
+
+          <View style={styles.paymentCard}>
+  <View style={styles.paymentHeader}>
+    <Ionicons name="hardware-chip-outline" size={20} color="#6B7280" />
+    <Text style={styles.paymentMethod}>Cartão na maquininha do lojista</Text>
+  </View>
+
+  <Text style={[styles.paymentDays, { color: "#16A34A" }]}>Imediato</Text>
+
+  <Text style={styles.paymentDescription}>
+    O cliente paga na sua própria maquininha. O recebimento ocorre conforme sua operadora (Cielo, PagSeguro, etc.).
+  </Text>
+
+  <Text style={[styles.paymentDescription, { marginTop: 6 }]}>
+    💡 O app registra apenas o pedido. O pagamento é feito fora do aplicativo.
+  </Text>
+   <View style={{ marginTop: 6 }}>
+              <Text style={[styles.paymentDescription, { fontWeight: "600" }]}>
+                🔎 Comissão conforme o plano da loja:
+              </Text>
+
+              <Text style={styles.paymentDescription}>• Plano Novo → 5%</Text>
+              <Text style={styles.paymentDescription}>• Plano Ativo → 8%</Text>
+              <Text style={styles.paymentDescription}>• Plano Destaque → 10%</Text>
+            </View>
+
+            <Text style={[styles.paymentDescription, { color: "#DC2626", marginTop: 6 }]}>
+              ⚠️ Comissão gerada no app — deve ser paga depois na área "Financeiro".
+            </Text>
+            </View>
 
           {/* Pix Direto */}
           <View style={styles.paymentCard}>
@@ -203,6 +256,35 @@ export default function AjudaScreen() {
             ⚠️ Prazo máximo de pagamento: <Text style={styles.bold}>30 dias</Text>.
             Após isso, a loja pode ser <Text style={styles.bold}>bloqueada</Text>.
           </Text>
+
+          <Text style={styles.sectionText}>
+            🔸 <Text style={styles.bold}>Taxa de processamento no cartão (app):</Text>
+                a loja pode configurar um acréscimo (%) quando o cliente escolher pagar no cartão pelo app.
+          </Text>
+
+          <Text style={styles.sectionText}>
+                Esse valor é mostrado ao cliente no checkout como "taxa de processamento".
+          </Text>
+
+          <Text style={styles.sectionText}>
+            💡 Serve para ajudar a loja a cobrir as tarifas do cartão.
+          </Text>
+          <Text style={styles.sectionText}>
+           No TRAZAÍ você recebe o valor dos pedidos e a plataforma cobra apenas um percentual sobre o valor dos produtos.
+          </Text>
+
+          <Text style={styles.sectionText}>
+           ✔ Taxa de entrega é 100% da loja
+          </Text>
+
+          <Text style={styles.sectionText}>
+          ✔ Acréscimo do cartão no app é configurável pela loja
+         </Text>
+
+          <Text style={styles.sectionText}>
+          ✔ Pagamentos na maquininha não passam no app
+          </Text>
+
         </View>
 
         {/* EVOLUÇÃO DOS PLANOS */}

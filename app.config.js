@@ -15,8 +15,17 @@ export default ({ config }) => ({
 
   icon: "./assets/images/icon.png",
 
+  // --- CONFIGURAÇÃO DA SPLASH NATIVA ---
+  // Esta imagem deve ser estática (geralmente apenas o logo centralizado)
+  splash: {
+    image: "./assets/images/splash-icon.png",
+    resizeMode: "contain",
+    backgroundColor: "#ffffff",
+  },
+
   ios: {
     supportsTablet: true,
+    bundleIdentifier: "com.adriano_marinho.trazailojista",
   },
 
   android: {
@@ -28,8 +37,14 @@ export default ({ config }) => ({
       backgroundColor: "#ffffff",
     },
 
-    edgeToEdgeEnabled: true,
+    // Garante que a splash cubra a tela toda em Androids novos
+    splash: {
+      image: "./assets/images/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#ffffff",
+    },
 
+    edgeToEdgeEnabled: true,
     googleServicesFile: "./google-services.json",
 
     intentFilters: [
@@ -55,7 +70,6 @@ export default ({ config }) => ({
 
   plugins: [
     "expo-router",
-
     [
       "expo-build-properties",
       {
@@ -68,7 +82,6 @@ export default ({ config }) => ({
         },
       },
     ],
-
     [
       "expo-notifications",
       {
@@ -83,7 +96,6 @@ export default ({ config }) => ({
     router: {},
     apiBaseUrl: "https://trazai.shop/api",
     assetBaseUrl: "https://trazai.shop",
-
     eas: {
       projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91",
     },

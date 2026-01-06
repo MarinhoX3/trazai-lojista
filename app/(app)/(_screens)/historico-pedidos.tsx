@@ -1,107 +1,99 @@
-"use client"
+"use client";
 
-import { Ionicons } from "@expo/vector-icons"
-import { useFocusEffect } from '@react-navigation/native'
-import { Stack, useRouter } from "expo-router"
-import { useCallback, useState } from "react"
+import React, { useCallback, useState, useEffect } from "react";
 import {
+  View,
+  Text,
+  StyleSheet,
   ActivityIndicator,
+  TouchableOpacity,
   Alert,
   FlatList,
   Modal,
-  SafeAreaView,
   ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native"
-import api from "../../../src/api/api"
-import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext"
+  StatusBar,
+  Platform,
+} from "react-native";
+import { Stack, useRouter, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Importações de API e Contexto (Caminhos relativos mantidos conforme o seu projeto local)
+import api from "../../../src/api/api";
+import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext";
 
 interface HistoricoItem {
-  id: number
-  data_hora: string
-  valor_total: string
-  status: string
-  nome_cliente: string
-  motivo_cancelamento?: string
+  id: number;
+  data_hora: string;
+  valor_total: string;
+  status: string;
+  nome_cliente: string;
+  motivo_cancelamento?: string;
 }
 
+const months = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
+// Componente do Seletor de Datas Personalizado
 const CustomDatePicker = ({
   visible,
   onClose,
   onSelect,
   initialDate,
+  title,
 }: {
-  visible: boolean
-  onClose: () => void
-  onSelect: (date: Date) => void
-  initialDate: Date
+  visible: boolean;
+  onClose: () => void;
+  onSelect: (date: Date) => void;
+  initialDate: Date;
+  title: string;
 }) => {
-  const [selectedDay, setSelectedDay] = useState(initialDate.getDate())
-  const [selectedMonth, setSelectedMonth] = useState(initialDate.getMonth())
-  const [selectedYear, setSelectedYear] = useState(initialDate.getFullYear())
-
-  const months = [
-    "Janeiro",
-    "Fevereiro",
-    "Março",
-    "Abril",
-    "Maio",
-    "Junho",
-    "Julho",
-    "Agosto",
-    "Setembro",
-    "Outubro",
-    "Novembro",
-    "Dezembro",
-  ]
+  const [selectedDay, setSelectedDay] = useState(initialDate.getDate());
+  const [selectedMonth, setSelectedMonth] = useState(initialDate.getMonth());
+  const [selectedYear, setSelectedYear] = useState(initialDate.getFullYear());
 
   const getDaysInMonth = (month: number, year: number) => {
-    return new Date(year, month + 1, 0).getDate()
-  }
+    return new Date(year, month + 1, 0).getDate();
+  };
 
   const handleConfirm = () => {
-    const newDate = new Date(selectedYear, selectedMonth, selectedDay)
-    onSelect(newDate)
-    onClose()
-  }
+    const newDate = new Date(selectedYear, selectedMonth, selectedDay);
+    onSelect(newDate);
+    onClose();
+  };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Selecionar Data</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#666" />
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeModalBtn}>
+              <Ionicons name="close" size={24} color="#1e293b" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.datePickerContainer}>
-            {/* Day Selector */}
+            {/* Dia */}
             <View style={styles.pickerColumn}>
               <Text style={styles.pickerLabel}>Dia</Text>
               <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                {Array.from({ length: getDaysInMonth(selectedMonth, selectedYear) }, (_, i) => i + 1).map(
-                  (day: number) => (
-                    <TouchableOpacity
-                      key={day}
-                      style={[styles.pickerItem, selectedDay === day && styles.pickerItemSelected]}
-                      onPress={() => setSelectedDay(day)}
-                    >
-                      <Text style={[styles.pickerItemText, selectedDay === day && styles.pickerItemTextSelected]}>
-                        {day}
-                      </Text>
-                    </TouchableOpacity>
-                  ),
-                )}
+                {Array.from({ length: getDaysInMonth(selectedMonth, selectedYear) }, (_, i) => i + 1).map((day) => (
+                  <TouchableOpacity
+                    key={day}
+                    style={[styles.pickerItem, selectedDay === day && styles.pickerItemSelected]}
+                    onPress={() => setSelectedDay(day)}
+                  >
+                    <Text style={[styles.pickerItemText, selectedDay === day && styles.pickerItemTextSelected]}>{day}</Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
 
-            {/* Month Selector */}
-            <View style={styles.pickerColumn}>
+            {/* Mês */}
+            <View style={[styles.pickerColumn, { flex: 2 }]}>
               <Text style={styles.pickerLabel}>Mês</Text>
               <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
                 {months.map((month, index) => (
@@ -110,27 +102,23 @@ const CustomDatePicker = ({
                     style={[styles.pickerItem, selectedMonth === index && styles.pickerItemSelected]}
                     onPress={() => setSelectedMonth(index)}
                   >
-                    <Text style={[styles.pickerItemText, selectedMonth === index && styles.pickerItemTextSelected]}>
-                      {month}
-                    </Text>
+                    <Text style={[styles.pickerItemText, selectedMonth === index && styles.pickerItemTextSelected]}>{month}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
 
-            {/* Year Selector */}
+            {/* Ano */}
             <View style={styles.pickerColumn}>
               <Text style={styles.pickerLabel}>Ano</Text>
               <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
                   <TouchableOpacity
                     key={year}
                     style={[styles.pickerItem, selectedYear === year && styles.pickerItemSelected]}
                     onPress={() => setSelectedYear(year)}
                   >
-                    <Text style={[styles.pickerItemText, selectedYear === year && styles.pickerItemTextSelected]}>
-                      {year}
-                    </Text>
+                    <Text style={[styles.pickerItemText, selectedYear === year && styles.pickerItemTextSelected]}>{year}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -138,445 +126,321 @@ const CustomDatePicker = ({
           </View>
 
           <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-            <Text style={styles.confirmButtonText}>Confirmar</Text>
+            <Text style={styles.confirmButtonText}>Confirmar Seleção</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Modal>
-  )
-}
+  );
+};
 
-export default function HistoricoPedidosScreen() {
-  const router = useRouter(); 
-  const [pedidos, setPedidos] = useState<HistoricoItem[]>([])
-  const [loading, setLoading] = useState(false)
-  const { loja } = useAuthLoja()
+export default function App() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { loja } = useAuthLoja();
 
-  const [dataInicio, setDataInicio] = useState(new Date())
-  const [dataFim, setDataFim] = useState(new Date())
-  const [showPickerInicio, setShowPickerInicio] = useState(false)
-  const [showPickerFim, setShowPickerFim] = useState(false)
+  const [pedidos, setPedidos] = useState<HistoricoItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [dataInicio, setDataInicio] = useState(new Date());
+  const [dataFim, setDataFim] = useState(new Date());
+  const [showPickerInicio, setShowPickerInicio] = useState(false);
+  const [showPickerFim, setShowPickerFim] = useState(false);
 
   const buscarHistoricoFiltrado = useCallback(async () => {
-    if (!loja?.id) return
-    
-
-    setLoading(true)
+    if (!loja?.id) return;
+    setLoading(true);
     try {
-      const inicioFormatado = dataInicio.toISOString().split("T")[0]
-      const fimFormatado = dataFim.toISOString().split("T")[0]
+      const inicioFormatado = dataInicio.toISOString().split("T")[0];
+      const fimFormatado = dataFim.toISOString().split("T")[0];
 
       const response = await api.get(`/pedidos/loja/${loja.id}/historico`, {
-        params: {
-          data_inicio: inicioFormatado,
-          data_fim: fimFormatado,
-        },
-      })
-
-      setPedidos(response.data)
-      if (response.data.length === 0) {
-        Alert.alert("Nenhum resultado", "Nenhum pedido encontrado para o período selecionado.")
-      }
+        params: { data_inicio: inicioFormatado, data_fim: fimFormatado },
+      });
+      setPedidos(response.data);
     } catch (error) {
-      console.error("Erro ao buscar histórico de pedidos:", error)
-      Alert.alert("Erro", "Não foi possível buscar o histórico de pedidos.")
+      console.error("Erro ao procurar histórico:", error);
+      Alert.alert("Erro", "Não foi possível carregar o histórico de pedidos.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [loja?.id, dataInicio, dataFim])
+  }, [loja?.id, dataInicio, dataFim]);
 
   useFocusEffect(
     useCallback(() => {
       buscarHistoricoFiltrado();
     }, [buscarHistoricoFiltrado])
   );
-  
-const renderItem = ({ item }: { item: HistoricoItem }) => (
- <TouchableOpacity
-  onPress={() =>
-    router.push(`detalhes-pedido?id_pedido=${item.id}`)
-  }
-  activeOpacity={0.8}
-  style={[styles.pedidoCard, item.status === "Cancelado" && styles.cardCancelado]}
->
 
-    <View style={styles.cardHeader}>
-      <View style={styles.clienteInfo}>
-        <Ionicons name="person-circle-outline" size={20} color="#666" />
-        <View>
-          <Text style={styles.clienteNome}>{item.nome_cliente}</Text>
-          <Text style={styles.numeroPedido}>Pedido nº {item.id}</Text>
-        </View>
-      </View>
-
-      <View
-        style={[styles.statusBadge, item.status === "Cancelado" ? styles.statusCancelado : styles.statusFinalizado]}
+  const renderItem = ({ item }: { item: HistoricoItem }) => {
+    const isCancelado = item.status === "Cancelado";
+    
+    return (
+      <TouchableOpacity
+        onPress={() => router.push(`detalhes-pedido?id_pedido=${item.id}`)}
+        activeOpacity={0.7}
+        style={styles.card}
       >
-        <Text style={styles.statusText}>{item.status}</Text>
-      </View>
-    </View>
+        <View style={styles.cardHeader}>
+          <View style={styles.orderIdBadge}>
+            <Text style={styles.orderIdText}>Pedido #{item.id}</Text>
+          </View>
+          <View style={[styles.statusBadge, isCancelado ? styles.badgeCancelado : styles.badgeFinalizado]}>
+            <Text style={[styles.statusText, isCancelado ? styles.textCancelado : styles.textFinalizado]}>
+              {item.status}
+            </Text>
+          </View>
+        </View>
 
-    <View style={styles.cardDivider} />
+        <View style={styles.clientRow}>
+          <View style={styles.clientIconBg}>
+            <Ionicons name="person" size={14} color="#2563eb" />
+          </View>
+          <Text style={styles.clientName}>{item.nome_cliente}</Text>
+        </View>
 
-    <View style={styles.cardDetails}>
-      <View style={styles.detailRow}>
-        <Ionicons name="calendar-outline" size={16} color="#666" />
-        <Text style={styles.detailText}>
-          {new Date(item.data_hora).toLocaleDateString("pt-BR")} às{" "}
-          {new Date(item.data_hora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-        </Text>
-      </View>
+        <View style={styles.divider} />
 
-      <View style={styles.detailRow}>
-        <Ionicons name="cash-outline" size={16} color="#666" />
-        <Text style={styles.valorTotal}>R$ {Number.parseFloat(item.valor_total).toFixed(2)}</Text>
-      </View>
-
-      {/* MOSTRAR MOTIVO DO CANCELAMENTO */}
-      {item.status === "Cancelado" && item.motivo_cancelamento && (
-        <View style={styles.cancelReasonContainer}>
-          <Ionicons name="alert-circle-outline" size={16} color="#d32f2f" />
-          <Text style={styles.cancelReasonText}>
-            <Text style={styles.cancelReasonLabel}>Motivo: </Text>
-            {item.motivo_cancelamento}
+        <View style={styles.detailsRow}>
+          <View style={styles.detailItem}>
+            <Ionicons name="calendar-outline" size={14} color="#94a3b8" />
+            <Text style={styles.detailText}>
+              {new Date(item.data_hora).toLocaleDateString("pt-BR")}
+            </Text>
+          </View>
+          <Text style={styles.totalValue}>
+            R$ {parseFloat(item.valor_total).toFixed(2).replace(".", ",")}
           </Text>
         </View>
-      )}
-    </View>
-  </TouchableOpacity>
-)
+
+        {isCancelado && item.motivo_cancelamento && (
+          <View style={styles.cancelBox}>
+            <Ionicons name="alert-circle-outline" size={14} color="#be123c" />
+            <Text style={styles.cancelText} numberOfLines={1}>
+              Motivo: {item.motivo_cancelamento}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: "Histórico de Pedidos" }} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.filterSection}>
-        <Text style={styles.titulo}>Histórico de Pedidos</Text>
+      {/* HEADER PERSONALIZADO COM INSET */}
+      <View style={[styles.customHeader, { paddingTop: insets.top + 10 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={28} color="#1e293b" />
+        </TouchableOpacity>
+        <View style={styles.headerTitleWrapper}>
+          <Text style={styles.headerTitle}>Histórico</Text>
+          <Text style={styles.headerSubtitle}>Gestão de Pedidos</Text>
+        </View>
+        <View style={{ width: 40 }} />
+      </View>
 
-        <View style={styles.dateFilterContainer}>
-          <TouchableOpacity style={styles.dateButton} onPress={() => setShowPickerInicio(true)}>
-            <Ionicons name="calendar" size={20} color="#D80032" />
-            <View style={styles.dateButtonContent}>
-              <Text style={styles.dateLabel}>Data Início</Text>
-              <Text style={styles.dateValue}>{dataInicio.toLocaleDateString("pt-BR")}</Text>
-            </View>
+      {/* PAINEL DE FILTROS SUPERIOR */}
+      <View style={styles.filterCard}>
+        <View style={styles.filterHeader}>
+          <Ionicons name="options-outline" size={16} color="#94a3b8" />
+          <Text style={styles.filterTitle}>Filtrar Período</Text>
+        </View>
+        
+        <View style={styles.dateRow}>
+          <TouchableOpacity style={styles.dateSelector} onPress={() => setShowPickerInicio(true)}>
+            <Text style={styles.dateLabel}>Desde</Text>
+            <Text style={styles.dateValue}>{dataInicio.toLocaleDateString("pt-BR")}</Text>
           </TouchableOpacity>
+          
+          <View style={styles.arrowContainer}>
+            <Ionicons name="arrow-forward" size={16} color="#cbd5e1" />
+          </View>
 
-          <TouchableOpacity style={styles.dateButton} onPress={() => setShowPickerFim(true)}>
-            <Ionicons name="calendar" size={20} color="#D80032" />
-            <View style={styles.dateButtonContent}>
-              <Text style={styles.dateLabel}>Data Fim</Text>
-              <Text style={styles.dateValue}>{dataFim.toLocaleDateString("pt-BR")}</Text>
-            </View>
+          <TouchableOpacity style={styles.dateSelector} onPress={() => setShowPickerFim(true)}>
+            <Text style={styles.dateLabel}>Até</Text>
+            <Text style={styles.dateValue}>{dataFim.toLocaleDateString("pt-BR")}</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.filterButton} onPress={buscarHistoricoFiltrado}>
-          <Ionicons name="search" size={20} color="#fff" />
-          <Text style={styles.filterButtonText}>Filtrar Pedidos</Text>
+        <TouchableOpacity style={styles.searchBtn} onPress={buscarHistoricoFiltrado} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Ionicons name="search" size={18} color="#fff" />
+              <Text style={styles.searchBtnText}>Atualizar Lista</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
-      
 
       <CustomDatePicker
+        title="Data Inicial"
         visible={showPickerInicio}
         onClose={() => setShowPickerInicio(false)}
         onSelect={setDataInicio}
         initialDate={dataInicio}
       />
       <CustomDatePicker
+        title="Data Final"
         visible={showPickerFim}
         onClose={() => setShowPickerFim(false)}
         onSelect={setDataFim}
         initialDate={dataFim}
       />
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D80032" />
-          <Text style={styles.loadingText}>Carregando pedidos...</Text>
+      {loading && pedidos.length === 0 ? (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>A procurar registos...</Text>
         </View>
       ) : (
         <FlatList
           data={pedidos}
           renderItem={renderItem}
           keyExtractor={(item) => String(item.id)}
-          style={styles.lista}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 40 }]}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={64} color="#ccc" />
-              <Text style={styles.textoVazio}>Nenhum pedido encontrado</Text>
-              <Text style={styles.textoVazioSubtitle}>Use o filtro acima para buscar pedidos</Text>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="receipt-outline" size={50} color="#cbd5e1" />
+              </View>
+              <Text style={styles.emptyTitle}>Sem pedidos registados</Text>
+              <Text style={styles.emptySubtitle}>Não foram encontrados pedidos para as datas selecionadas.</Text>
             </View>
           }
-          contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
-    </SafeAreaView>
-  )
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  centerBox: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 12, color: '#64748b', fontWeight: '600' },
+  
+  // Custom Header
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9'
   },
-  filterSection: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  titulo: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-    marginBottom: 20,
-  },
-  dateFilterContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
-  },
-  dateButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8f8f8",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    gap: 10,
-  },
-  dateButtonContent: {
-    flex: 1,
-  },
-  dateLabel: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 2,
-  },
-  dateValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1a1a1a",
-  },
-  filterButton: {
-    backgroundColor: "#D80032",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  filterButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#666",
-  },
-  lista: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  pedidoCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardCancelado: {
-    backgroundColor: "#fff5f5",
-    borderLeftWidth: 4,
-    borderLeftColor: "#ff4444",
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  clienteInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  clienteNome: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-    flex: 1,
-  },
-  numeroPedido: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  statusFinalizado: {
-    backgroundColor: "#e8f5e9",
-  },
-  statusCancelado: {
-    backgroundColor: "#ffebee",
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: "#f0f0f0",
-    marginBottom: 12,
-  },
-  cardDetails: {
-    gap: 8,
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    color: "#666",
-  },
-  valorTotal: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#2e7d32",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  textoVazio: {
-    textAlign: "center",
-    marginTop: 16,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#666",
-  },
-  textoVazioSubtitle: {
-    textAlign: "center",
-    marginTop: 8,
-    fontSize: 14,
-    color: "#999",
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: "70%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-  },
-  datePickerContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
-  },
-  pickerColumn: {
-    flex: 1,
-  },
-  pickerLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#666",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  pickerScroll: {
-    maxHeight: 200,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 12,
-  },
-  pickerItem: {
-    padding: 12,
-    alignItems: "center",
-  },
-  pickerItemSelected: {
-    backgroundColor: "#D80032",
-  },
-  pickerItemText: {
-    fontSize: 16,
-    color: "#1a1a1a",
-  },
-  pickerItemTextSelected: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  confirmButton: {
-    backgroundColor: "#D80032",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  confirmButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-    cancelReasonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 4,
-  },
-  cancelReasonLabel: {
-    fontWeight: "bold",
-    color: "#d32f2f",
-  },
-  cancelReasonText: {
-    fontSize: 14,
-    color: "#b71c1c",
-    flex: 1,
-    flexWrap: "wrap",
-  },
+  headerTitleWrapper: { alignItems: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1e293b' },
+  headerSubtitle: { fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  backBtn: { padding: 4 },
 
-})
+  // Painel de Filtros
+  filterCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    zIndex: 10
+  },
+  filterHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  filterTitle: { fontSize: 12, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginLeft: 6 },
+  dateRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, alignItems: 'center' },
+  dateSelector: { flex: 1, backgroundColor: '#f8fafc', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#f1f5f9' },
+  arrowContainer: { paddingHorizontal: 8 },
+  dateLabel: { fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 },
+  dateValue: { fontSize: 14, fontWeight: '800', color: '#1e293b' },
+  searchBtn: { 
+    backgroundColor: '#2563eb', 
+    height: 52, 
+    borderRadius: 16, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2
+  },
+  searchBtnText: { color: '#fff', fontWeight: '800', fontSize: 16, marginLeft: 8 },
+
+  // Cartões de Histórico
+  listContent: { padding: 20, paddingTop: 24 },
+  card: { 
+    backgroundColor: '#fff', 
+    borderRadius: 24, 
+    padding: 16, 
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5
+  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  orderIdBadge: { backgroundColor: '#f1f5f9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  orderIdText: { fontSize: 13, fontWeight: '800', color: '#1e293b' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  badgeFinalizado: { backgroundColor: '#dcfce7' },
+  badgeCancelado: { backgroundColor: '#fee2e2' },
+  statusText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  textFinalizado: { color: '#166534' },
+  textCancelado: { color: '#991b1b' },
+
+  clientRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  clientIconBg: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center' },
+  clientName: { fontSize: 15, fontWeight: '700', color: '#334155' },
+  
+  divider: { height: 1, backgroundColor: '#f1f5f9', marginBottom: 12 },
+  
+  detailsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  detailItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  detailText: { fontSize: 13, color: '#64748b', fontWeight: '600' },
+  totalValue: { fontSize: 17, fontWeight: '800', color: '#16a34a' },
+
+  cancelBox: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 6, 
+    backgroundColor: '#fff1f2', 
+    padding: 8, 
+    borderRadius: 12, 
+    marginTop: 12 
+  },
+  cancelText: { fontSize: 12, color: '#be123c', fontWeight: '600', flex: 1 },
+
+  // Estado Vazio
+  emptyContainer: { padding: 40, alignItems: 'center', justifyContent: 'center', marginTop: 40 },
+  emptyIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 24, elevation: 2, shadowOpacity: 0.05 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b', marginBottom: 10 },
+  emptySubtitle: { fontSize: 14, color: '#94a3b8', textAlign: 'center', lineHeight: 22 },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.6)", justifyContent: "center", padding: 24 },
+  modalContent: { backgroundColor: "#fff", borderRadius: 32, padding: 24, elevation: 12 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
+  modalTitle: { fontSize: 20, fontWeight: "800", color: "#1e293b" },
+  closeModalBtn: { padding: 4 },
+  datePickerContainer: { flexDirection: "row", gap: 8, marginBottom: 24, height: 200 },
+  pickerColumn: { flex: 1.5 },
+  pickerLabel: { fontSize: 11, fontWeight: "800", color: "#94a3b8", textAlign: "center", marginBottom: 8, textTransform: 'uppercase' },
+  pickerScroll: { backgroundColor: "#f8fafc", borderRadius: 16, borderWidth: 1, borderColor: '#f1f5f9' },
+  pickerItem: { paddingVertical: 12, alignItems: "center" },
+  pickerItemSelected: { backgroundColor: "#2563eb" },
+  pickerItemText: { fontSize: 15, color: "#475569", fontWeight: '700' },
+  pickerItemTextSelected: { color: "#fff", fontWeight: "900" },
+  confirmButton: { backgroundColor: "#2563eb", height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  confirmButtonText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+});

@@ -1,26 +1,27 @@
 "use client";
 
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Platform,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Switch,
   Text,
   TextInput,
-  Button,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  Image,
-  Pressable,
-  Platform,
   TouchableOpacity,
-  Switch,
-  StatusBar,
+  View,
+  ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { Linking } from "react-native";
 
 import api, { ASSET_BASE_URL } from "../../../src/api/api";
 import { useAuthLoja } from "../../../src/api/contexts/AuthLojaContext";
@@ -32,7 +33,6 @@ export default function EditLojaScreen() {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [endereco, setEndereco] = useState("");
-  const [pixKey, setPixKey] = useState("");
   const [logo, setLogo] = useState<any>(null);
   const [logoAtualUrl, setLogoAtualUrl] = useState<string | null>(null);
 
@@ -43,6 +43,8 @@ export default function EditLojaScreen() {
   const [aceitaPix, setAceitaPix] = useState(true);
   const [aceitaCartao, setAceitaCartao] = useState(true);
   const [aceitaDinheiro, setAceitaDinheiro] = useState(true);
+  const [aceitaMaquininha, setAceitaMaquininha] = useState(true);
+  const [taxaStripe, setTaxaStripe] = useState("5");
   const [loadingPagamentos, setLoadingPagamentos] = useState(false);
 
   /* HEADER */
@@ -50,9 +52,10 @@ export default function EditLojaScreen() {
     <View style={styles.headerContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color="#333" />
+        <Ionicons name="arrow-back" size={24} color="#1f2937" />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{title}</Text>
+      <View style={{ width: 40 }} /> 
     </View>
   );
 
@@ -63,19 +66,16 @@ export default function EditLojaScreen() {
     const loadAll = async () => {
       try {
         const res = await api.get(`/lojas/${loja.id}`);
-
         setNome(res.data.nome_loja || "");
         setTelefone(res.data.telefone_contato || "");
         setEndereco(res.data.endereco_loja || "");
-        setPixKey(res.data.pix_key || "");
         setLogoAtualUrl(res.data.url_logo || null);
 
-        // buscar métodos de pagamento
         const mp = await api.get(`/pedidos/loja/${loja.id}/metodos-pagamento`);
-
         setAceitaPix(!!mp.data.aceita_pix);
         setAceitaCartao(!!mp.data.aceita_cartao);
         setAceitaDinheiro(!!mp.data.aceita_dinheiro);
+        setAceitaMaquininha(!!mp.data.aceita_maquininha);
       } catch {
         Alert.alert("Erro", "Não foi possível carregar os dados.");
       } finally {
@@ -86,28 +86,7 @@ export default function EditLojaScreen() {
     loadAll();
   }, [loja?.id]);
 
-  /* ATUALIZAR MÉTODOS DE PAGAMENTO */
-  const salvarMetodosPagamento = async () => {
-    if (!loja?.id) return;
-
-    try {
-      setLoadingPagamentos(true);
-
-      await api.put(`/pedidos/loja/${loja.id}/metodos-pagamento`, {
-        aceita_pix: aceitaPix ? 1 : 0,
-        aceita_cartao: aceitaCartao ? 1 : 0,
-        aceita_dinheiro: aceitaDinheiro ? 1 : 0,
-      });
-
-      Alert.alert("Sucesso", "Opções de pagamento atualizadas!");
-    } catch {
-      Alert.alert("Erro", "Não foi possível salvar os métodos.");
-    } finally {
-      setLoadingPagamentos(false);
-    }
-  };
-
-  /* IMAGEM */
+  /* ALTERAR LOGO */
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -125,221 +104,402 @@ export default function EditLojaScreen() {
       ? `${ASSET_BASE_URL}/${logoAtualUrl}?t=${Date.now()}`
       : "https://placehold.co/150x150/e2e8f0/e2e8f0?text=Logo");
 
-  /* ATUALIZAR PERFIL DA LOJA */
-  const handleUpdate = async () => {
-    if (!loja?.id) return;
-
+  const salvarLogo = async () => {
+    if (!loja?.id || !logo) return;
     const formData = new FormData();
+    const ext = logo.uri.split(".").pop();
 
-    formData.append("nome_loja", nome);
-    formData.append("telefone_contato", telefone);
-    formData.append("endereco_loja", endereco);
-    formData.append("pix_key", pixKey);
-
-    if (logo) {
-      const ext = logo.uri.split(".").pop();
-      formData.append("logo", {
-        uri: Platform.OS === "android" ? logo.uri : logo.uri.replace("file://", ""),
-        name: `logo.${ext}`,
-        type: `image/${ext}`,
-      } as any);
-    }
+    formData.append("logo", {
+      uri: Platform.OS === "android" ? logo.uri : logo.uri.replace("file://", ""),
+      name: `logo.${ext}`,
+      type: `image/${ext}`,
+    } as any);
 
     try {
       await api.put(`/lojas/${loja.id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
-      Alert.alert("Sucesso", "Dados atualizados!");
+      Alert.alert("Sucesso", "Logo atualizada com sucesso!");
     } catch {
-      Alert.alert("Erro", "Não foi possível salvar.");
+      Alert.alert("Erro", "Não foi possível atualizar o logo.");
     }
   };
 
-  /* STRIPE CONNECT */
-  const handleConnectStripe = async () => {
-    if (!loja?.id || !token) {
-      Alert.alert("Erro", "Loja não identificada.");
-      return;
-    }
-
-    setStripeLoading(true);
-
+  const salvarMetodosPagamento = async () => {
+    if (!loja?.id) return;
     try {
-      const res = await api.post(
-        "/lojas/criar-link-stripe",
-        { id_loja: loja.id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      await Linking.openURL(res.data.url);
+      setLoadingPagamentos(true);
+      await api.put(`/pedidos/loja/${loja.id}/metodos-pagamento`, {
+        aceita_pix: aceitaPix ? 1 : 0,
+        aceita_cartao: aceitaCartao ? 1 : 0,
+        aceita_dinheiro: aceitaDinheiro ? 1 : 0,
+        aceita_maquininha: aceitaMaquininha ? 1 : 0,
+        taxa_cartao_stripe: Number(taxaStripe) || 0,
+      });
+      Alert.alert("Sucesso", "Opções de pagamento atualizadas!");
     } catch {
-      Alert.alert("Erro", "Não foi possível abrir o Stripe.");
+      Alert.alert("Erro", "Não foi possível salvar os métodos.");
     } finally {
-      setStripeLoading(false);
+      setLoadingPagamentos(false);
     }
   };
 
-  /* SUPORTE */
-  const handleContactSupport = async () => {
-    const email = "trazai_shop@outlook.com";
-    const subject = "Suporte - App Lojista TRAZAÍ";
-
-    const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
-
-    try {
-      await Linking.openURL(mailto);
-    } catch {
-      Alert.alert("Suporte", `Envie e-mail para: ${email}`);
-    }
-  };
-
-  /* LOGOUT */
-  const handleLogout = () => {
-    Alert.alert("Sair", "Deseja realmente sair?", [
+  const handleLogout = async () => {
+    Alert.alert("Sair da conta", "Deseja realmente encerrar a sessão?", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Sair",
         style: "destructive",
-        onPress: async () => {
-          await logout();
-          router.replace("/" as any);
+        onPress: () => {
+          logout();
+          router.replace("/login" as any);
         },
       },
     ]);
   };
 
-  /* LOADING */
   if (loading) {
     return (
       <View style={styles.containerCentered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={{ marginTop: 10, color: "#6b7280" }}>Carregando dados...</Text>
       </View>
     );
   }
 
-  /* RENDER */
+  /* STRIPE CONNECT */
+const handleConnectStripe = async () => {
+  if (!loja?.id || !token) {
+    Alert.alert("Erro", "Loja não identificada.");
+    return;
+  }
+
+  setStripeLoading(true);
+
+  try {
+    const res = await api.post(
+      "/lojas/criar-link-stripe",
+      { id_loja: loja.id },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!res.data?.url) {
+      Alert.alert("Erro", "URL do Stripe não recebida.");
+      return;
+    }
+
+    await Linking.openURL(res.data.url);
+  } catch (e: any) {
+    console.log("ERRO STRIPE >>>", e?.response?.data || e);
+    Alert.alert("Erro", "Não foi possível abrir o Stripe.");
+  } finally {
+    setStripeLoading(false);
+  }
+};
+
   return (
     <View style={styles.container}>
       <HeaderBar title="Configurações da Loja" />
 
-      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent}>
-        {/* LOGO */}
-        <Pressable onPress={pickImage} style={styles.imageContainer}>
-          <Image source={{ uri: displayImageUri }} style={styles.profileImage} />
-          <Text style={styles.imagePickerText}>Tocar para alterar o logo</Text>
-        </Pressable>
+      <KeyboardAwareScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        
+        {/* SEÇÃO LOGO */}
+        <View style={styles.sectionCardCentered}>
+          <Pressable onPress={pickImage} style={styles.imageWrapper}>
+            <Image source={{ uri: displayImageUri }} style={styles.profileImage} />
+            <View style={styles.cameraIconBadge}>
+              <Ionicons name="camera" size={18} color="#fff" />
+            </View>
+          </Pressable>
+          <Text style={styles.imageHint}>Toque para alterar a imagem</Text>
+          
+          {logo && (
+            <TouchableOpacity style={styles.saveLogoBtn} onPress={salvarLogo}>
+              <Text style={styles.saveLogoBtnText}>Confirmar nova logo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-        {/* CAMPOS */}
-        <Text style={styles.label}>Nome da Loja</Text>
-        <TextInput style={styles.input} value={nome} onChangeText={setNome} />
+        {/* INFORMAÇÕES GERAIS */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Informações Gerais</Text>
+          <TouchableOpacity onPress={() => router.push("/editar-dados-loja" as any)}>
+            <Text style={styles.editLink}>Editar Dados</Text>
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.label}>Telefone</Text>
-        <TextInput style={styles.input} value={telefone} onChangeText={setTelefone} />
+        <View style={styles.card}>
+          <View style={styles.infoRow}>
+            <Ionicons name="business-outline" size={20} color="#6b7280" />
+            <View style={styles.infoTextGroup}>
+              <Text style={styles.infoLabel}>Nome da Loja</Text>
+              <Text style={styles.infoValue}>{nome}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.infoDivider} />
 
-        <Text style={styles.label}>Endereço</Text>
-        <TextInput style={styles.input} value={endereco} onChangeText={setEndereco} multiline />
+          <View style={styles.infoRow}>
+            <Ionicons name="call-outline" size={20} color="#6b7280" />
+            <View style={styles.infoTextGroup}>
+              <Text style={styles.infoLabel}>Telefone</Text>
+              <Text style={styles.infoValue}>{telefone}</Text>
+            </View>
+          </View>
 
-        <Text style={styles.label}>Chave PIX</Text>
-        <TextInput style={styles.input} value={pixKey} onChangeText={setPixKey} />
+          <View style={styles.infoDivider} />
 
-        <Button title="Salvar Alterações" onPress={handleUpdate} />
+          <View style={styles.infoRow}>
+            <Ionicons name="location-outline" size={20} color="#6b7280" />
+            <View style={styles.infoTextGroup}>
+              <Text style={styles.infoLabel}>Endereço</Text>
+              <Text style={styles.infoValue}>{endereco}</Text>
+            </View>
+          </View>
+        </View>
 
-        {/* PAGAMENTOS ONLINE */}
-        <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Pagamentos Online</Text>
+       {/* PAGAMENTOS ONLINE (STRIPE) */}
+{/* PAGAMENTOS ONLINE (STRIPE) */}
+<Text style={styles.sectionTitle}>Pagamentos Online</Text>
 
-        <Button
-          title={stripeLoading ? "Aguarde..." : "Configurar Pagamentos"}
-          color="#6772E5"
-          onPress={handleConnectStripe}
-          disabled={stripeLoading}
-        />
+<View style={styles.card}>
+  <Text style={styles.cardDescription}>
+    Receba pagamentos por Cartão de Crédito diretamente no aplicativo
+    utilizando a plataforma Stripe, com repasses automáticos.
+  </Text>
 
-        {/* MÉTODOS DE PAGAMENTO ACEITOS */}
-        <View style={styles.divider} />
-        <Text style={styles.sectionTitle}>Métodos aceitos no app</Text>
+  <TouchableOpacity
+    style={[
+      styles.stripeButton,
+      stripeLoading && { opacity: 0.6 }
+    ]}
+    onPress={handleConnectStripe}
+    disabled={stripeLoading}
+  >
+    {stripeLoading ? (
+      <ActivityIndicator color="#fff" />
+    ) : (
+      <>
+        <Ionicons name="card-outline" size={20} color="#fff" />
+        <Text style={styles.stripeButtonText}>
+          Configurar Stripe
+        </Text>
+      </>
+    )}
+  </TouchableOpacity>
 
-        <View style={styles.payBox}>
+  <Text
+    style={{
+      marginTop: 10,
+      fontSize: 12,
+      color: "#6b7280",
+      textAlign: "center",
+    }}
+  >
+    Você será redirecionado para o ambiente seguro do Stripe para concluir
+    a configuração da sua conta bancária e dados fiscais.
+  </Text>
+</View>
+
+        {/* MÉTODOS DE PAGAMENTO */}
+        <Text style={styles.sectionTitle}>Métodos de Pagamento</Text>
+        <View style={styles.card}>
           <View style={styles.payRow}>
-            <Ionicons name="qr-code-outline" size={22} color="#16A34A" />
-            <Text style={styles.payText}>Pix</Text>
-            <Switch value={aceitaPix} onValueChange={setAceitaPix} />
+            <View style={styles.payRowLeft}>
+              <View style={[styles.iconCircle, { backgroundColor: '#f0fdf4' }]}>
+                <Ionicons name="qr-code" size={20} color="#16a34a" />
+              </View>
+              <Text style={styles.payTextText}>Pix</Text>
+            </View>
+            <Switch 
+              value={aceitaPix} 
+              onValueChange={setAceitaPix} 
+              trackColor={{ false: "#d1d5db", true: "#bbf7d0" }}
+              thumbColor={aceitaPix ? "#16a34a" : "#f4f3f4"}
+            />
           </View>
 
           <View style={styles.payRow}>
-            <Ionicons name="card-outline" size={22} />
-            <Text style={styles.payText}>Cartão no aplicativo</Text>
-            <Switch value={aceitaCartao} onValueChange={setAceitaCartao} />
-          </View>
-
-          <View style={styles.payRow}>
-            <Ionicons name="cash-outline" size={22} />
-            <Text style={styles.payText}>Dinheiro na entrega</Text>
+            <View style={styles.payRowLeft}>
+              <View style={[styles.iconCircle, { backgroundColor: '#fff7ed' }]}>
+                <Ionicons name="cash-outline" size={20} color="#ea580c" />
+              </View>
+              <Text style={styles.payTextText}>Dinheiro na entrega</Text>
+            </View>
             <Switch value={aceitaDinheiro} onValueChange={setAceitaDinheiro} />
           </View>
 
-          <Button
-            title={loadingPagamentos ? "Salvando..." : "Salvar opções"}
+          <View style={styles.payRow}>
+            <View style={styles.payRowLeft}>
+              <View style={[styles.iconCircle, { backgroundColor: '#f3f4f6' }]}>
+                <Ionicons name="hardware-chip-outline" size={20} color="#4b5563" />
+              </View>
+              <Text style={styles.payTextText}>Maquininha Própria</Text>
+            </View>
+            <Switch value={aceitaMaquininha} onValueChange={setAceitaMaquininha} />
+          </View>
+
+          <View style={styles.payRow}>
+            <View style={styles.payRowLeft}>
+              <View style={[styles.iconCircle, { backgroundColor: '#eff6ff' }]}>
+                <Ionicons name="phone-portrait-outline" size={20} color="#2563eb" />
+              </View>
+              <Text style={styles.payTextText}>Cartão no App</Text>
+            </View>
+            <Switch value={aceitaCartao} onValueChange={setAceitaCartao} />
+          </View>
+
+          {aceitaCartao && (
+            <View style={styles.taxContainer}>
+              <Text style={styles.taxLabel}>Taxa de acréscimo para o cliente (%)</Text>
+              <TextInput
+                style={styles.taxInput}
+                value={taxaStripe}
+                keyboardType="numeric"
+                onChangeText={setTaxaStripe}
+                placeholder="Ex: 5"
+              />
+            </View>
+          )}
+
+          <TouchableOpacity 
+            style={[styles.saveOptionsBtn, loadingPagamentos && { opacity: 0.7 }]} 
             onPress={salvarMetodosPagamento}
-            color="#16A34A"
-          />
+          >
+            <Text style={styles.saveOptionsBtnText}>
+              {loadingPagamentos ? "Salvando..." : "Salvar Configurações"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* AJUDA */}
-        <TouchableOpacity style={styles.helpButton} onPress={() => router.push("/ajuda" as any)}>
-          <Ionicons name="help-circle-outline" size={24} color="#16A34A" />
-          <Text style={styles.helpButtonText}>Central de Ajuda</Text>
+        {/* LINKS DE SUPORTE */}
+        <Text style={styles.sectionTitle}>Suporte</Text>
+        <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/ajuda" as any)}>
+          <Ionicons name="help-circle-outline" size={22} color="#16a34a" />
+          <Text style={styles.menuItemText}>Central de Ajuda</Text>
+          <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
         </TouchableOpacity>
 
-        {/* SUPORTE */}
-        <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
-          <Ionicons name="mail-outline" size={24} color="#2563EB" />
-          <Text style={styles.supportButtonText}>Falar com Suporte</Text>
+        <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL(`mailto:suporte@exemplo.com`)}>
+          <Ionicons name="chatbubbles-outline" size={22} color="#2563eb" />
+          <Text style={styles.menuItemText}>Falar com o Suporte</Text>
+          <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
         </TouchableOpacity>
 
         {/* LOGOUT */}
-        <View style={styles.logoutButtonContainer}>
-          <Button title="Sair (Logout)" color="red" onPress={handleLogout} />
+        <View style={styles.logoutSection}>
+           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={20} color="#dc2626" />
+              <Text style={styles.logoutBtnText}>Sair da Conta</Text>
+           </TouchableOpacity>
+           <Text style={styles.versionText}>TrazAí - Painel Lojista</Text>
         </View>
+
       </KeyboardAwareScrollView>
     </View>
   );
 }
 
-/* ESTILOS */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  containerCentered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scrollContent: { padding: 20, paddingBottom: 40 },
+  container: { flex: 1, backgroundColor: "#f9fafb" },
+  containerCentered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: '#fff' },
+  scrollContent: { padding: 16, paddingBottom: 60 },
 
   headerContainer: {
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 10 : 50,
-    paddingBottom: 10,
-    alignItems: "center",
+    backgroundColor: "#fff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 10 : 60,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6'
   },
-  backButton: { position: "absolute", left: 15, top: 50 },
-  headerTitle: { fontWeight: "700", fontSize: 18 },
+  backButton: { width: 40 },
+  headerTitle: { fontWeight: "700", fontSize: 17, color: '#1f2937' },
 
-  imageContainer: { alignItems: "center", marginBottom: 15 },
-  profileImage: { width: 120, height: 120, borderRadius: 60, backgroundColor: "#eee" },
-  imagePickerText: { color: "#007BFF", marginTop: 6 },
+  // Perfil / Logo
+  sectionCardCentered: { alignItems: "center", marginBottom: 24 },
+  imageWrapper: { position: 'relative' },
+  profileImage: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#e5e7eb', borderWidth: 3, borderColor: '#fff' },
+  cameraIconBadge: { 
+    position: 'absolute', 
+    bottom: 0, 
+    right: 0, 
+    backgroundColor: '#2563eb', 
+    width: 34, 
+    height: 34, 
+    borderRadius: 17, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#fff'
+  },
+  imageHint: { color: "#6b7280", marginTop: 8, fontSize: 13 },
+  saveLogoBtn: { backgroundColor: '#2563eb', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, marginTop: 12 },
+  saveLogoBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
 
-  label: { fontWeight: "600" },
-  input: { borderWidth: 1, borderColor: "#ddd", padding: 10, borderRadius: 10, marginBottom: 10 },
+  // Cards e Seções
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 },
+  sectionTitle: { fontWeight: "700", fontSize: 14, color: "#4b5563", textTransform: 'uppercase', marginBottom: 12, marginTop: 16 },
+  editLink: { color: '#2563eb', fontSize: 14, fontWeight: '600' },
+  
+  card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 16, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  cardDescription: { color: '#6b7280', fontSize: 14, marginBottom: 16, lineHeight: 20 },
 
-  divider: { marginVertical: 15, borderBottomWidth: 1, borderBottomColor: "#eee" },
-  sectionTitle: { fontWeight: "700", fontSize: 17, marginBottom: 10 },
+  // Itens de Informação
+  infoRow: { flexDirection: 'row', alignItems: 'center' },
+  infoTextGroup: { marginLeft: 12 },
+  infoLabel: { fontSize: 12, color: '#9ca3af', marginBottom: 2 },
+  infoValue: { fontSize: 15, color: '#1f2937', fontWeight: '500' },
+  infoDivider: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 12, marginLeft: 32 },
 
-  payBox: { backgroundColor: "#F9FAFB", padding: 12, borderRadius: 14, gap: 10 },
-  payRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  payText: { flex: 1, marginLeft: 8, fontWeight: "500" },
+  saveOptionsBtn: { backgroundColor: "#16a34a", padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 16 },
+  saveOptionsBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 
-  helpButton: { marginTop: 15, flexDirection: "row", gap: 8, padding: 12, backgroundColor: "#F0FDF4", borderRadius: 12 },
-  helpButtonText: { color: "#16A34A", fontWeight: "600" },
+  // Pagamentos
+  payRow: { flexDirection: "row", alignItems: "center", justifyContent: 'space-between', paddingVertical: 12 },
+  payRowLeft: { flexDirection: 'row', alignItems: 'center' },
+  iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  payTextText: { marginLeft: 12, fontWeight: "600", color: '#374151', fontSize: 15 },
 
-  supportButton: { marginTop: 10, flexDirection: "row", gap: 8, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 12 },
-  supportButtonText: { color: "#2563EB", fontWeight: "600" },
+  taxContainer: { marginTop: 12, padding: 12, backgroundColor: '#f9fafb', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' },
+  taxLabel: { fontSize: 13, fontWeight: "600", color: '#4b5563' },
+  taxInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginTop: 8, fontSize: 16 },
 
-  logoutButtonContainer: { marginTop: 20 },
+  // Menu de Itens
+  menuItem: { backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 8 },
+  menuItemText: { flex: 1, marginLeft: 12, fontWeight: '600', color: '#1f2937' },
+
+  // Logout
+  logoutSection: { marginTop: 32, alignItems: 'center', paddingBottom: 20 },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fee2e2', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
+  logoutBtnText: { color: '#dc2626', fontWeight: '700', marginLeft: 8 },
+  versionText: { 
+  color: '#9ca3af',
+  fontSize: 12,
+  marginTop: 16,
+},
+
+stripeButton: {
+  backgroundColor: "#635BFF",
+  paddingVertical: 12,
+  borderRadius: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  marginTop: 10,
+},
+
+stripeButtonText: {
+  color: "#fff",
+  fontWeight: "700",
+  marginLeft: 8,
+  fontSize: 15,
+},
+
 });
