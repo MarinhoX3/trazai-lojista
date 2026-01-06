@@ -84,30 +84,30 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     loadAuth();
   }, []);
 
- // 🔹 Controle de rotas
+ // 🔹 Controle de rotas com suporte a reset de senha via deep link
 useEffect(() => {
   if (!navigationState?.key) return;
-  if (loading) return;
 
-  // ❗ Garantir que segments exista
-  if (!segments || (segments.length as number) === 0) return;
+  if (loading) return;
 
   const currentRoute = segments.join("/");
 
-  console.log("🔎 currentRoute =>", currentRoute);
-
-  // ✅ 1) Permitir rota de redefinição de senha
-  if (currentRoute.includes("reset-password")) return;
-
-  // 🔐 2) usuário NÃO logado → fica no grupo auth
-  if (!loja) {
-    if (!currentRoute.startsWith("(auth)")) {
-      router.replace("/(auth)/login");
-    }
+  // 👉 permitir sempre o reset password (sem login)
+  if (
+    currentRoute.includes("reset-password") ||
+    currentRoute.includes("reset") ||
+    currentRoute.includes("password")
+  ) {
     return;
   }
 
-  // 🟢 3) usuário logado → vai para app
+  // ❌ usuário não logado → manda para login
+  if (!loja) {
+    router.replace("/(auth)/login");
+    return;
+  }
+
+  // ✅ logado → leva para dashboard
   if (!currentRoute.startsWith("(app)")) {
     router.replace("/(app)/(tabs)/dashboard");
   }
