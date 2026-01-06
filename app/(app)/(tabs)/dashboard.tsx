@@ -46,15 +46,22 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [termoBusca, setTermoBusca] = useState("");
   const [contagemPedidos, setContagemPedidos] = useState(0);
-  const [raioEntrega, setRaioEntrega] = useState<number | null>(null);
+  const [raioEntrega, setRaioEntrega] = useState<number>(0);
   const [salvandoRaio, setSalvandoRaio] = useState(false);
   const [mensagemSalva, setMensagemSalva] = useState("");
 
-  useEffect(() => {
-    if (loja && loja.raio_entrega_km != null) {
-      setRaioEntrega(loja.raio_entrega_km);
-    }
-  }, [loja]);
+useEffect(() => {
+  if (!loja) return;
+
+  setRaioEntrega(
+    loja.raio_entrega_km !== undefined && loja.raio_entrega_km !== null
+      ? Number(loja.raio_entrega_km)
+      : 0
+  );
+
+  console.log("⚠️ STATE SETADO DO EFFECT ===>", loja.raio_entrega_km);
+}, [loja]);
+
 
   const fetchProdutos = useCallback(async () => {
     if (!loja?.id) return;
@@ -87,24 +94,41 @@ export default function DashboardScreen() {
   );
 
   const handleSalvarRaio = async () => {
-    if (!loja?.id || raioEntrega === null) return;
-    try {
-      setSalvandoRaio(true);
-      await api.put(`/lojas/${loja.id}`, { raio_entrega_km: raioEntrega });
-      setMensagemSalva("Atualizado!");
+  if (!loja?.id) return;
 
-      if (updateAuthLoja) {
-        updateAuthLoja({ raio_entrega_km: raioEntrega });
-      }
+  try {
+    setSalvandoRaio(true);
 
-      setTimeout(() => setMensagemSalva(""), 3000);
-    } catch (error) {
-      console.error("Erro ao guardar o raio:", error);
-      setMensagemSalva("Erro!");
-    } finally {
-      setSalvandoRaio(false);
-    }
-  };
+    // salva no backend
+    const res = await api.put(`/lojas/${loja.id}`, {
+      raio_entrega_km: raioEntrega,
+    });
+
+    // pega valor que o backend devolveu (se devolver)
+    const novoRaio =
+      res?.data?.raio_entrega_km !== undefined
+        ? Number(res.data.raio_entrega_km)
+        : Number(raioEntrega);
+
+    // atualiza estado local
+    setRaioEntrega(novoRaio);
+
+    // atualiza contexto + AsyncStorage
+    await updateAuthLoja({
+      raio_entrega_km: novoRaio,
+    });
+
+    console.log("🔥 RAIO ATUALIZADO CONTEXTO =>", novoRaio);
+
+    setMensagemSalva("Atualizado!");
+    setTimeout(() => setMensagemSalva(""), 3000);
+  } catch (error) {
+    console.error("Erro ao guardar o raio:", error);
+    setMensagemSalva("Erro!");
+  } finally {
+    setSalvandoRaio(false);
+  }
+};
 
   const produtosFiltrados = useMemo(() => {
     if (!termoBusca.trim()) return produtos;
@@ -198,7 +222,16 @@ export default function DashboardScreen() {
                     style={styles.raioInput}
                     keyboardType="numeric"
                     value={raioEntrega?.toString() ?? ""}
-                    onChangeText={(value) => setRaioEntrega(parseFloat(value) || 0)}
+                    onChangeText={(value) => {
+  if (value === "") {
+    setRaioEntrega(0);
+    return;
+  }
+
+  const num = Number(value);
+  if (!isNaN(num)) setRaioEntrega(num);
+}}
+
                     onBlur={handleSalvarRaio}
                     editable={!salvandoRaio}
                   />

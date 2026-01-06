@@ -227,11 +227,11 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 42,
     fontWeight: "900",
-    color: "#097422ff", // Texto em Azul para contraste
+    color: "#097422ff", // Texto em verde para contraste
     letterSpacing: -1,
   },
   badge: {
-    backgroundColor: "#026407ff", 
+    backgroundColor: "#241f7aff", 
     paddingHorizontal: 16,
     paddingVertical: 4,
     borderRadius: 20,

@@ -1,4 +1,5 @@
-// app/(auth)/index.tsx
+"use client";
+
 import React, { useState } from 'react';
 import { 
   View, 
@@ -12,25 +13,22 @@ import {
   Platform, 
   StyleSheet, 
   Alert, 
-  LogBox 
+  LogBox,
+  Dimensions,
+  TouchableOpacity
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Link, Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// Importações de API e Contexto
+// Nota: Estas referências dependem da estrutura local do seu projeto
 import api from '../../src/api/api';
 import { AuthLoja, useAuthLoja } from '../../src/api/contexts/AuthLojaContext';
 
-
 LogBox.ignoreLogs(['Got DOWN touch before receiving UP or CANCEL from last gesture']);
 
-// Tipagem da resposta da API
-interface LoginResponse {
-  token: string;
-  loja: {
-    id: string;
-    nome: string;
-    [key: string]: any; // para outros campos dinâmicos da loja
-  };
-}
+const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const [email, setEmail] = useState<string>('');
@@ -39,214 +37,287 @@ export default function LoginScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
 
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { login } = useAuthLoja();
 
   const handleLogin = async () => {
-  if (!email || !senha) {
-    Alert.alert('Atenção', 'Por favor, preencha e-mail e senha.');
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const response = await api.post('/lojas/login', {
-      email_login: email,
-      senha: senha
-    });
-
-    // Mapear os dados da API para o tipo AuthLoja
-    const lojaData: AuthLoja = {
-      id: response.data.loja.id,
-      nome_loja: response.data.loja.nome,       // mapear para nome_loja
-      email_login: response.data.loja.email,    // mapear para email_login
-      taxa_entrega: response.data.loja.taxa_entrega // opcional
-    };
-
-    // Chama a função login do contexto
-    await login(lojaData, response.data.token);
-
-  router.replace("(app)/(tabs)/dashboard");
-
-  } catch (error: any) {
-    if (error.response?.data?.message) {
-      Alert.alert('Erro no Login', error.response.data.message);
-    } else {
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua internet.');
+    if (!email || !senha) {
+      Alert.alert('Atenção', 'Por favor, preencha o e-mail e a senha para aceder.');
+      return;
     }
-  } finally {
-    setLoading(false);
-  }
-};
 
+    setLoading(true);
+    try {
+      const response = await api.post('/lojas/login', {
+        email_login: email,
+        senha: senha
+      });
+
+      const lojaData: AuthLoja = {
+        id: response.data.loja.id,
+        nome_loja: response.data.loja.nome,
+        email_login: response.data.loja.email,
+        taxa_entrega: response.data.loja.taxa_entrega
+      };
+
+      await login(lojaData, response.data.token);
+      router.replace("(app)/(tabs)/dashboard");
+
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Não foi possível conectar ao servidor. Verifique a sua ligação.';
+      Alert.alert('Falha no Acesso', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
-      style={styles.fullScreenContainer}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
+      <Stack.Screen options={{ headerShown: false }} />
+      
       <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 40 }]} 
         keyboardShouldPersistTaps="handled" 
         showsVerticalScrollIndicator={false}
       >
-        <Stack.Screen options={{ headerShown: false }} />
-
-        <Image
-          source={require('../../assets/logo.png')}
-          style={styles.logo}
-        />
-
-        <Text style={styles.titulo}>Bem-vindo!</Text>
-        <Text style={styles.tituloLojista}>Lojista</Text>
-        <Text style={styles.subtitulo}>Faça seu login para continuar</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Digite seu e-mail"
-          placeholderTextColor="#888"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          returnKeyType="next"
-        />
-
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.inputPassword}
-            placeholder="Digite sua senha"
-            placeholderTextColor="#888"
-            value={senha}
-            onChangeText={setSenha}
-            secureTextEntry={!isPasswordVisible}
-            returnKeyType="done"
-            onSubmitEditing={handleLogin}
-          />
-          <Pressable
-            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            style={styles.eyeIcon}
-            accessibilityLabel={isPasswordVisible ? "Esconder senha" : "Mostrar senha"}
-          >
-            <Ionicons 
-              name={isPasswordVisible ? "eye-off" : "eye"} 
-              size={24} 
-              color="#000" 
+        {/* SECÇÃO DO LOGÓTIPO */}
+        <View style={styles.headerSection}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logo}
             />
-          </Pressable>
+          </View>
+          
+          <Text style={styles.portalTag}>PORTAL DO LOJISTA</Text>
         </View>
 
-        <View style={styles.buttonContainer}>
-          {loading ? (
-            <ActivityIndicator size="large" color="#007BFF" />
-          ) : (
-            <Pressable onPress={handleLogin} style={styles.loginButton}>
-              <Text style={styles.loginButtonText}>Entrar</Text>
+        {/* SECÇÃO DO FORMULÁRIO */}
+        <View style={styles.formContainer}>
+          <Text style={styles.welcomeTitle}>Seja Bem vindo!</Text>
+          <Text style={styles.subTitle}>Inicie sessão para gerir o seu negócio</Text>
+
+          {/* Campo de E-mail */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>E-mail Profissional</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="exemplo@loja.com"
+                placeholderTextColor="#cbd5e1"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          {/* Campo de Senha */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Palavra-passe</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="lock-closed-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="A sua senha segura"
+                placeholderTextColor="#cbd5e1"
+                value={senha}
+                onChangeText={setSenha}
+                secureTextEntry={!isPasswordVisible}
+                autoCapitalize="none"
+              />
+              <Pressable 
+                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                style={styles.eyeIcon}
+              >
+                <Ionicons 
+                  name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color="#94a3b8" 
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          <TouchableOpacity
+          style={styles.forgotPassword}
+          onPress={() => router.push("/(auth)/forgot-password")}
+          >
+          <Text style={styles.forgotText}>Esqueci minha senha!</Text>
+          </TouchableOpacity>
+
+
+          {/* Botão de Login */}
+          <TouchableOpacity 
+            onPress={handleLogin} 
+            style={[styles.loginButton, loading && styles.buttonDisabled]}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Text style={styles.loginButtonText}>Acessar sua Loja</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* RODAPÉ */}
+        <View style={styles.footer}>
+          <Text style={styles.noAccountText}>Ainda não é parceiro? </Text>
+          <Link href="/(auth)/register" asChild>
+            <Pressable>
+              <Text style={styles.linkText}>Criar Conta</Text>
             </Pressable>
-          )}
+          </Link>
         </View>
-
-        <Link href="/(auth)/register" asChild>
-
-
-          <Pressable>
-            <Text style={styles.linkText}>
-              Ainda não tem uma conta? Cadastre-se
-            </Text>
-          </Pressable>
-        </Link>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  fullScreenContainer: {
+  container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
+    paddingHorizontal: 30,
+    paddingBottom: 40,
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoContainer: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
     justifyContent: 'center',
-    padding: 20,
-    paddingBottom: 50,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 8,
+    marginBottom: 16,
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 70,
+    height: 70,
     resizeMode: 'contain',
-    alignSelf: 'center',
+  },
+  brandName: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#1E3A8A',
+    letterSpacing: -0.5,
+  },
+  portalTag: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#94a3b8',
+    letterSpacing: 2,
+    marginTop: 4,
+  },
+  formContainer: {
+    flex: 1,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 6,
+  },
+  subTitle: {
+    fontSize: 15,
+    color: '#64748b',
+    marginBottom: 32,
+  },
+  inputGroup: {
     marginBottom: 20,
   },
-  titulo: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#333',
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  tituloLojista: {
-    fontSize: 22,
-    fontWeight: '600',
-    textAlign: 'center',
-    color: '#333',
-    marginBottom: 10,
-  },
-  subtitulo: {
-    fontSize: 16,
-    color: 'gray',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  input: {
-    height: 50,
-    borderColor: '#e0e0e0',
-    borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
-    fontSize: 16,
-    color: '#000',
-  },
-  passwordContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderColor: '#ccc',
+    backgroundColor: '#F8FAF6',
     borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 15,
-    backgroundColor: '#f5f5f5',
+    borderColor: '#F1F5F9',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 56,
   },
-  inputPassword: {
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
     flex: 1,
-    height: 50,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    color: '#000',
+    fontSize: 15,
+    color: '#1e293b',
+    fontWeight: '500',
   },
   eyeIcon: {
-    padding: 10,
+    padding: 8,
   },
-  buttonContainer: {
-    marginTop: 10,
-    marginBottom: 20,
-    height: 50,
-    justifyContent: 'center',
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 32,
+  },
+  forgotText: {
+    color: '#1E3A8A',
+    fontSize: 13,
+    fontWeight: '600',
   },
   loginButton: {
-    backgroundColor: '#007BFF',
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: '#0b8211ff',
+    borderRadius: 18,
+    height: 58,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  noAccountText: {
+    fontSize: 14,
+    color: '#64748b',
   },
   linkText: {
-    color: '#007BFF',
-    textAlign: 'center',
-    fontSize: 16,
+    fontSize: 14,
+    color: '#1E3A8A',
+    fontWeight: '800',
   },
 });

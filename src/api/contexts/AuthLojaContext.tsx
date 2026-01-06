@@ -2,15 +2,15 @@
 
 import React, {
   createContext,
-  useState,
-  useContext,
   ReactNode,
+  useContext,
   useEffect,
+  useState,
 } from "react";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRootNavigationState, useRouter, useSegments } from "expo-router";
 import api from "../api";
-import { useRouter, useSegments, useRootNavigationState } from "expo-router";
 
 export interface AuthLoja {
   id: number;
@@ -55,12 +55,25 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
         const storedToken = await AsyncStorage.getItem("@AppLojista:token");
 
         if (storedLoja && storedToken) {
-          const lojaData: AuthLoja = JSON.parse(storedLoja);
-          setLoja(lojaData);
-          setToken(storedToken);
+  const lojaData: AuthLoja = JSON.parse(storedLoja);
+  console.log("📦 STORAGE LOJA ===>", lojaData); 
 
-          api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
-        }
+  const lojaNormalizada: AuthLoja = {
+  ...lojaData,
+
+  raio_entrega_km:
+  lojaData.raio_entrega_km != null
+    ? Number(lojaData.raio_entrega_km)
+    : undefined,
+
+};
+
+  setLoja(lojaNormalizada);
+  setToken(storedToken);
+
+  api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+}
+
       } catch (err) {
         console.error("Erro ao carregar autenticação:", err);
       } finally {
@@ -71,33 +84,56 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     loadAuth();
   }, []);
 
-  // 🔹 Controle de rotas
-  useEffect(() => {
-    if (!navigationState?.key) return;
+ // 🔹 Controle de rotas
+useEffect(() => {
+  if (!navigationState?.key) return;
+  if (loading) return;
 
-    const currentGroup = segments[0];
+  // ❗ Garantir que segments exista
+  if (!segments || (segments.length as number) === 0) return;
 
-    if (loading) return;
+  const currentRoute = segments.join("/");
 
-    if (!loja) {
-      if (currentGroup !== "(auth)") router.replace("/(auth)");
-      return;
+  console.log("🔎 currentRoute =>", currentRoute);
+
+  // ✅ 1) Permitir rota de redefinição de senha
+  if (currentRoute.includes("reset-password")) return;
+
+  // 🔐 2) usuário NÃO logado → fica no grupo auth
+  if (!loja) {
+    if (!currentRoute.startsWith("(auth)")) {
+      router.replace("/(auth)/login");
     }
+    return;
+  }
 
-    if (currentGroup !== "(app)") {
-      router.replace("/(app)/(tabs)/dashboard");
-    }
-  }, [loading, loja, segments, navigationState]);
+  // 🟢 3) usuário logado → vai para app
+  if (!currentRoute.startsWith("(app)")) {
+    router.replace("/(app)/(tabs)/dashboard");
+  }
+}, [loading, loja, segments, navigationState]);
 
   // 🔹 Login
   const login = async (lojaData: AuthLoja, authToken: string) => {
+    console.log("🟢 LOGIN BACKEND ===>", lojaData);
     try {
-      setLoja(lojaData);
+      const lojaNormalizada: AuthLoja = {
+        ...lojaData,
+        raio_entrega_km:
+          lojaData.raio_entrega_km != null
+            ? Number(lojaData.raio_entrega_km)
+            : 0,
+      };
+
+      setLoja(lojaNormalizada);
       setToken(authToken);
 
       api.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
 
-      await AsyncStorage.setItem("@AppLojista:loja", JSON.stringify(lojaData));
+      await AsyncStorage.setItem(
+        "@AppLojista:loja",
+        JSON.stringify(lojaNormalizada)
+      );
       await AsyncStorage.setItem("@AppLojista:token", authToken);
 
       router.replace("/(app)/(tabs)/dashboard");
@@ -123,19 +159,32 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // 🔹 Atualiza dados da loja
+  // 🔹 Atualiza dados da loja no contexto e storage
   const updateAuthLoja = async (updatedData: Partial<AuthLoja>) => {
     try {
+      let updated: AuthLoja | null = null;
+
       setLoja((prev) => {
         if (!prev) return null;
 
-        const newData = { ...prev, ...updatedData };
-        AsyncStorage.setItem("@AppLojista:loja", JSON.stringify(newData));
-        return newData;
+        updated = {
+          ...prev,
+          ...updatedData,
+          raio_entrega_km:
+            updatedData.raio_entrega_km !== undefined
+              ? Number(updatedData.raio_entrega_km)
+              : prev.raio_entrega_km ?? 0,
+        };
+
+        AsyncStorage.setItem(
+          "@AppLojista:loja",
+          JSON.stringify(updated)
+        );
+
+        return updated;
       });
 
-      const stored = await AsyncStorage.getItem("@AppLojista:loja");
-      return stored ? JSON.parse(stored) : null;
+      return updated;
     } catch (err) {
       console.error("Erro ao atualizar loja na Auth:", err);
       return loja;
