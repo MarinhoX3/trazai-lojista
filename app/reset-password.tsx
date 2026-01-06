@@ -56,31 +56,36 @@ export default function ResetPasswordScreen() {
         Informe sua nova senha de acesso.
       </Text>
 
-      <TextInput
-        placeholder="Nova senha"
-        secureTextEntry
-        value={senha}
-        onChangeText={setSenha}
-        style={{
-          borderWidth: 1,
-          marginTop: 20,
-          padding: 12,
-          borderRadius: 10,
-        }}
-      />
+     <TextInput
+  placeholder="Nova senha"
+  secureTextEntry
+  value={senha}
+  onChangeText={setSenha}
+  style={{
+    borderWidth: 1,
+    borderColor: "#000",
+    padding: 12,
+    borderRadius: 8,
+    color: "#000"           // 👈 TEXTO PRETO
+  }}
+  placeholderTextColor="#888"  // 👈 PLACEHOLDER VISÍVEL
+/>
 
-      <TextInput
-        placeholder="Confirmar nova senha"
-        secureTextEntry
-        value={confirmarSenha}
-        onChangeText={setConfirmarSenha}
-        style={{
-          borderWidth: 1,
-          marginTop: 10,
-          padding: 12,
-          borderRadius: 10,
-        }}
-      />
+<TextInput
+  placeholder="Confirmar nova senha"
+  secureTextEntry
+  value={confirmarSenha}
+  onChangeText={setConfirmarSenha}
+  style={{
+    borderWidth: 1,
+    borderColor: "#000",
+    padding: 12,
+    borderRadius: 8,
+    color: "#000"           // 👈 TEXTO PRETO
+  }}
+  placeholderTextColor="#888"  // 👈 PLACEHOLDER VISÍVEL
+/>
+
 
       <TouchableOpacity
         onPress={handleReset}
