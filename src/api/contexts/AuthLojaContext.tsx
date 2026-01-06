@@ -85,32 +85,30 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
  // 🔹 Controle de rotas com suporte a reset de senha via deep link
+// Controle de rotas com suporte a deep link
 useEffect(() => {
-  if (!navigationState?.key) return;
 
+  if (!navigationState?.key) return;
   if (loading) return;
 
   const currentRoute = segments.join("/");
 
-  // 👉 permitir sempre o reset password (sem login)
-  if (
-    currentRoute.includes("reset-password") ||
-    currentRoute.includes("reset") ||
-    currentRoute.includes("password")
-  ) {
+  // 👉 PERMITIR reset-password sem login
+  if (currentRoute.includes("reset-password")) {
     return;
   }
 
-  // ❌ usuário não logado → manda para login
+  // ❌ não logado
   if (!loja) {
     router.replace("/(auth)/login");
     return;
   }
 
-  // ✅ logado → leva para dashboard
+  // ✅ logado
   if (!currentRoute.startsWith("(app)")) {
     router.replace("/(app)/(tabs)/dashboard");
   }
+
 }, [loading, loja, segments, navigationState]);
 
   // 🔹 Login
