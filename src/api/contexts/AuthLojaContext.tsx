@@ -11,6 +11,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRootNavigationState, useRouter, useSegments } from "expo-router";
 import api from "../api";
+import * as Linking from "expo-linking";
 
 export interface AuthLoja {
   id: number;
@@ -84,32 +85,41 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     loadAuth();
   }, []);
 
- // 🔹 Controle de rotas com suporte a reset de senha via deep link
 // Controle de rotas com suporte a deep link
 useEffect(() => {
-
   if (!navigationState?.key) return;
+
   if (loading) return;
 
   const currentRoute = segments.join("/");
 
-  // 👉 PERMITIR reset-password sem login
+  console.log("🧭 ROTA ATUAL =>", currentRoute);
+
+  // 🚫 nunca redirecionar quando está em not-found
+  if (currentRoute.includes("+not-found")) {
+    return;
+  }
+
+  // 🟢 permitir reset-password SEM login
   if (currentRoute.includes("reset-password")) {
     return;
   }
 
-  // ❌ não logado
+  // 🔴 usuário NÃO logado
   if (!loja) {
-    router.replace("/(auth)/login");
+    if (!currentRoute.startsWith("(auth)")) {
+      router.replace("/(auth)");
+    }
     return;
   }
 
-  // ✅ logado
+  // 🟢 usuário logado
   if (!currentRoute.startsWith("(app)")) {
     router.replace("/(app)/(tabs)/dashboard");
   }
 
 }, [loading, loja, segments, navigationState]);
+
 
   // 🔹 Login
   const login = async (lojaData: AuthLoja, authToken: string) => {

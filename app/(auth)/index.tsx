@@ -306,11 +306,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 40,
-  },
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginTop: 30,   // ↓ reduzido
+  marginBottom: 50,
+},
   noAccountText: {
     fontSize: 14,
     color: '#64748b',
