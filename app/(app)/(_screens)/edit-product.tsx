@@ -176,9 +176,35 @@ console.log("API ativo =>", p.ativo, typeof p.ativo);
   };
 
 
-  function handleSave(event: GestureResponderEvent): void {
-    throw new Error("Function not implemented.");
+  const handleSave = async () => {
+  if (!nome || !preco || !unidade || !categoria) {
+    Alert.alert("Atenção", "Preencha todos os campos obrigatórios (*)");
+    return;
   }
+
+  try {
+    setIsSaving(true);
+
+    await api.put(`/produtos/${id}`, {
+      nome,
+      descricao,
+      preco: Number(preco),
+      unidade_de_venda: unidade,
+      estoque: Number(estoque),
+      categoria,
+      ativo: ativo ? 1 : 0
+    });
+
+    Alert.alert("Sucesso", "Produto atualizado com sucesso!");
+    router.back();
+
+  } catch (e) {
+    console.log(e);
+    Alert.alert("Erro", "Falha ao guardar alterações do produto.");
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView 
