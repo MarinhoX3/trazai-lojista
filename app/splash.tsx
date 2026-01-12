@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 42,
     fontWeight: "900",
-    color: "#097422ff", // Texto em verde para contraste
+    color: "#241f7aff", // Texto em verde para contraste
     letterSpacing: -1,
   },
   badge: {
