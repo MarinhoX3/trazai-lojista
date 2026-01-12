@@ -151,7 +151,7 @@ export default function Splash({ onFinish }: { onFinish: () => void }) {
           ]}
         >
           <Animated.Image
-            source={require("../assets/logo2.png")}
+            source={require("../assets/logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
