@@ -33,7 +33,7 @@ export default ({ config }) => ({
     versionCode: 28,
 
     adaptiveIcon: {
-      foregroundImage: "./assets/images/adaptive-icon.png",
+      foregroundImage: "./assets/images/branco.png",
       backgroundColor: "#ffffff",
     },
 
@@ -63,7 +63,7 @@ export default ({ config }) => ({
 
   notification: {
     icon: "./assets/images/notification-icon.png",
-    color: "#0B7709",
+    color: "rgb(37, 32, 140)",
     androidMode: "default",
     androidCollapsedTitle: "TrazAí Loja",
   },
@@ -86,7 +86,7 @@ export default ({ config }) => ({
       "expo-notifications",
       {
         icon: "./assets/images/notification-icon.png",
-        color: "#0B7709",
+        color: "#241f7aff",
         androidCollapsedTitle: "TrazAí Loja",
       },
     ],
