@@ -18,10 +18,9 @@ export default ({ config }) => ({
   // --- CONFIGURAÇÃO DA SPLASH NATIVA ---
   // Esta imagem deve ser estática (geralmente apenas o logo centralizado)
   splash: {
-    image: "./assets/images/splash-icon.png",
-    resizeMode: "contain",
-    backgroundColor: "#ffffff",
-  },
+  backgroundColor: "#ffffff",
+  resizeMode: "contain",
+},
 
   ios: {
     supportsTablet: true,
@@ -33,16 +32,15 @@ export default ({ config }) => ({
     versionCode: 28,
 
     adaptiveIcon: {
-      foregroundImage: "./assets/images/branco.png",
+      foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#ffffff",
     },
 
     // Garante que a splash cubra a tela toda em Androids novos
     splash: {
-      image: "./assets/images/splash-icon.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff",
-    },
+  backgroundColor: "#ffffff",
+  resizeMode: "contain",
+},
 
     edgeToEdgeEnabled: true,
     googleServicesFile: "./google-services.json",
