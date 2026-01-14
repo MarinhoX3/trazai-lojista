@@ -43,7 +43,7 @@ export default function ResetPasswordScreen() {
       });
 
       Alert.alert("Sucesso", "Senha alterada com sucesso!");
-      router.replace("/(auth)/login");
+      router.replace("/(auth)/index");
 
     } catch (err: any) {
       console.log("ERRO API:", err?.response?.data || err);
