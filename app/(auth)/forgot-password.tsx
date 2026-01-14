@@ -9,28 +9,31 @@ export default function ForgotPassword() {
   const router = useRouter();
 
   const handleSend = async () => {
-    if (!email) {
-      Alert.alert("Atenção", "Informe o email cadastrado.");
+    if (!email.trim()) {
+      Alert.alert("Atenção", "Informe o e-mail cadastrado.");
       return;
     }
 
     try {
       setLoading(true);
 
-      await api.post("/lojas/reset-senha/request", { email });
+      await api.post("/lojas/reset-senha/request", {
+        email: email.trim().toLowerCase(),
+      });
 
       Alert.alert(
         "Pronto!",
-        "Se o email existir, enviamos o link com instruções."
+        "Se o e-mail existir, enviamos um link para redefinir sua senha."
       );
 
       router.back();
 
     } catch (error: any) {
-      console.log(error?.response?.data);
+      console.log("ERRO RESET:", error?.response?.data || error);
+
       Alert.alert(
         "Erro",
-        error?.response?.data?.message || "Erro ao enviar email"
+        error?.response?.data?.message || "Erro ao enviar o e-mail."
       );
     } finally {
       setLoading(false);
@@ -56,7 +59,10 @@ export default function ForgotPassword() {
           borderWidth: 1,
           borderRadius: 10,
           padding: 12,
+          borderColor: "#000",
+          color: "#000",
         }}
+        placeholderTextColor="#888"
         value={email}
         onChangeText={setEmail}
       />

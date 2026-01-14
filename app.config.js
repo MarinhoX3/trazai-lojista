@@ -90,14 +90,17 @@ export default ({ config }) => ({
     ],
   ],
 
-  extra: {
-    router: {},
-    apiBaseUrl: "https://trazai.shop/api",
-    assetBaseUrl: "https://trazai.shop",
-    eas: {
-      projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91",
-    },
+ extra: {
+  router: {
+    origin: "applojista://",
   },
+  apiBaseUrl: "https://trazai.shop/api",
+  assetBaseUrl: "https://trazai.shop",
+  eas: {
+    projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91",
+  },
+},
+
 
   owner: "adriano_marinho",
 });

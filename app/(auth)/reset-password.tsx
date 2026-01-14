@@ -1,18 +1,28 @@
-// app/reset-password.ts
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import api from "../src/api/api";
+import api from "../../src/api/api";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { token } = useLocalSearchParams<{ token: string }>();
+
+  // 🔥 Captura correta do token vindo do deep link
+  const params = useLocalSearchParams();
+  const rawToken = params.token;
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
+
+  console.log("TOKEN FINAL:", token);
 
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleReset = async () => {
+    if (!token) {
+      Alert.alert("Erro", "Link inválido ou expirado.");
+      return;
+    }
+
     if (!senha || !confirmarSenha) {
       Alert.alert("Erro", "Preencha os dois campos de senha.");
       return;
@@ -26,17 +36,17 @@ export default function ResetPasswordScreen() {
     try {
       setLoading(true);
 
-      const response = await api.post("/lojas/reset-senha/confirmar", {
-        token,
-         nova_senha: senha,
+      // 🔥 Payload idêntico ao Postman
+      await api.post("/lojas/reset-senha/confirmar", {
+        token: String(token),
+        novaSenha: senha,
       });
 
       Alert.alert("Sucesso", "Senha alterada com sucesso!");
-
-      router.replace("/(auth)/login"); // volta para login
+      router.replace("/(auth)/login");
 
     } catch (err: any) {
-      console.log(err?.response?.data || err);
+      console.log("ERRO API:", err?.response?.data || err);
       Alert.alert(
         "Erro",
         err?.response?.data?.message || "Erro ao redefinir senha."
@@ -56,36 +66,37 @@ export default function ResetPasswordScreen() {
         Informe sua nova senha de acesso.
       </Text>
 
-     <TextInput
-  placeholder="Nova senha"
-  secureTextEntry
-  value={senha}
-  onChangeText={setSenha}
-  style={{
-    borderWidth: 1,
-    borderColor: "#000",
-    padding: 12,
-    borderRadius: 8,
-    color: "#000"           // 👈 TEXTO PRETO
-  }}
-  placeholderTextColor="#888"  // 👈 PLACEHOLDER VISÍVEL
-/>
+      <TextInput
+        placeholder="Nova senha"
+        secureTextEntry
+        value={senha}
+        onChangeText={setSenha}
+        style={{
+          borderWidth: 1,
+          borderColor: "#000",
+          padding: 12,
+          borderRadius: 8,
+          color: "#000",
+          marginTop: 20
+        }}
+        placeholderTextColor="#888"
+      />
 
-<TextInput
-  placeholder="Confirmar nova senha"
-  secureTextEntry
-  value={confirmarSenha}
-  onChangeText={setConfirmarSenha}
-  style={{
-    borderWidth: 1,
-    borderColor: "#000",
-    padding: 12,
-    borderRadius: 8,
-    color: "#000"           // 👈 TEXTO PRETO
-  }}
-  placeholderTextColor="#888"  // 👈 PLACEHOLDER VISÍVEL
-/>
-
+      <TextInput
+        placeholder="Confirmar nova senha"
+        secureTextEntry
+        value={confirmarSenha}
+        onChangeText={setConfirmarSenha}
+        style={{
+          borderWidth: 1,
+          borderColor: "#000",
+          padding: 12,
+          borderRadius: 8,
+          color: "#000",
+          marginTop: 10
+        }}
+        placeholderTextColor="#888"
+      />
 
       <TouchableOpacity
         onPress={handleReset}
