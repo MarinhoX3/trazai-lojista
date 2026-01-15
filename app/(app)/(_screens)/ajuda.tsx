@@ -9,7 +9,7 @@ import * as Linking from "expo-linking";
 
 export default function AjudaScreen() {
   const handleContactSupport = async () => {
-    const phone = "5585996574629";
+    const phone = "5585920013692";
     const message = "Olá! Preciso de ajuda com o app TRAZAÍ.";
 
     const appUrl = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
@@ -22,7 +22,7 @@ export default function AjudaScreen() {
     } catch (error) {
       Alert.alert(
         "Erro",
-        "Não foi possível abrir o WhatsApp. Número para contato: (85) 99657-4629"
+        "Não foi possível abrir o WhatsApp. Número para contato: (85) 92001-3692"
       );
     }
   };
