@@ -46,6 +46,9 @@ export default function EditLojaScreen() {
   const [aceitaMaquininha, setAceitaMaquininha] = useState(true);
   const [taxaStripe, setTaxaStripe] = useState("5");
   const [loadingPagamentos, setLoadingPagamentos] = useState(false);
+  const [aceitaEntrega, setAceitaEntrega] = useState(true);
+  const [aceitaRetirada, setAceitaRetirada] = useState(true);
+  const [loadingEntrega, setLoadingEntrega] = useState(false);
 
   /* HEADER */
   const HeaderBar = ({ title }: { title: string }) => (
@@ -66,6 +69,8 @@ export default function EditLojaScreen() {
     const loadAll = async () => {
       try {
         const res = await api.get(`/lojas/${loja.id}`);
+        setAceitaEntrega(!!res.data.aceita_entrega);
+        setAceitaRetirada(!!res.data.aceita_retirada);
         setNome(res.data.nome_loja || "");
         setTelefone(res.data.telefone_contato || "");
         setEndereco(res.data.endereco_loja || "");
@@ -143,6 +148,25 @@ export default function EditLojaScreen() {
       setLoadingPagamentos(false);
     }
   };
+
+  const salvarEntregaRetirada = async () => {
+  if (!loja?.id) return;
+
+  try {
+    setLoadingEntrega(true);
+
+    await api.put(`/lojas/${loja.id}/entrega`, {
+      aceita_entrega: aceitaEntrega ? 1 : 0,
+      aceita_retirada: aceitaRetirada ? 1 : 0,
+    });
+
+    Alert.alert("Sucesso", "Configurações de entrega atualizadas!");
+  } catch {
+    Alert.alert("Erro", "Não foi possível salvar as opções de entrega.");
+  } finally {
+    setLoadingEntrega(false);
+  }
+};
 
   const handleLogout = async () => {
     Alert.alert("Sair da conta", "Deseja realmente encerrar a sessão?", [
@@ -313,6 +337,47 @@ const handleConnectStripe = async () => {
   <Text style={styles.menuItemText}>Horário de Funcionamento</Text>
   <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
 </TouchableOpacity>
+
+<Text style={styles.sectionTitle}>Entrega e Retirada</Text>
+
+<View style={styles.card}>
+  <View style={styles.payRow}>
+    <View style={styles.payRowLeft}>
+      <View style={[styles.iconCircle, { backgroundColor: '#ecfeff' }]}>
+        <Ionicons name="bicycle-outline" size={20} color="#0891b2" />
+      </View>
+      <Text style={styles.payTextText}>Entrega</Text>
+    </View>
+
+    <Switch
+      value={aceitaEntrega}
+      onValueChange={setAceitaEntrega}
+    />
+  </View>
+
+  <View style={styles.payRow}>
+    <View style={styles.payRowLeft}>
+      <View style={[styles.iconCircle, { backgroundColor: '#fefce8' }]}>
+        <Ionicons name="walk-outline" size={20} color="#ca8a04" />
+      </View>
+      <Text style={styles.payTextText}>Retirada no local</Text>
+    </View>
+
+    <Switch
+      value={aceitaRetirada}
+      onValueChange={setAceitaRetirada}
+    />
+  </View>
+
+  <TouchableOpacity
+    style={[styles.saveOptionsBtn, loadingEntrega && { opacity: 0.7 }]}
+    onPress={salvarEntregaRetirada}
+  >
+    <Text style={styles.saveOptionsBtnText}>
+      {loadingEntrega ? "Salvando..." : "Salvar Opções"}
+    </Text>
+  </TouchableOpacity>
+</View>
 
         {/* MÉTODOS DE PAGAMENTO */}
         <Text style={styles.sectionTitle}>Métodos de Pagamento</Text>
