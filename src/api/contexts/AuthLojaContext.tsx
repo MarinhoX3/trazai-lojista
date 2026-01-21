@@ -17,6 +17,7 @@ export interface AuthLoja {
   id: number;
   nome_loja: string;
   email_login: string;
+
   endereco_loja?: string;
   telefone_contato?: string;
   categoria?: string;
@@ -24,6 +25,16 @@ export interface AuthLoja {
   url_logo?: string | null;
   push_token?: string | null;
   raio_entrega_km?: number;
+
+  // 🕒 FUNCIONAMENTO DA LOJA
+  loja_aberta_manual?: number | boolean;
+  horarios_funcionamento?: {
+    [dia: string]: {
+      ativo: boolean;
+      abre: string;
+      fecha: string;
+    };
+  };
 }
 
 interface AuthLojaContextData {
@@ -176,13 +187,18 @@ useEffect(() => {
         if (!prev) return null;
 
         updated = {
-          ...prev,
-          ...updatedData,
-          raio_entrega_km:
-            updatedData.raio_entrega_km !== undefined
-              ? Number(updatedData.raio_entrega_km)
-              : prev.raio_entrega_km ?? 0,
-        };
+  ...prev,
+  ...updatedData,
+  loja_aberta_manual:
+    updatedData.loja_aberta_manual !== undefined
+      ? Boolean(updatedData.loja_aberta_manual)
+      : prev.loja_aberta_manual,
+
+  raio_entrega_km:
+    updatedData.raio_entrega_km !== undefined
+      ? Number(updatedData.raio_entrega_km)
+      : prev.raio_entrega_km ?? 0,
+};
 
         AsyncStorage.setItem(
           "@AppLojista:loja",

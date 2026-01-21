@@ -1,3 +1,5 @@
+
+// app/(app)/(tabs)/dashboard.tsx
 "use client";
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
@@ -17,6 +19,8 @@ import {
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppState } from "react-native";
+
 
 // Importações de API e Contexto
 import api, { ASSET_BASE_URL } from "../../../src/api/api";
@@ -83,6 +87,37 @@ useEffect(() => {
       setContagemPedidos(0);
     }
   }, [loja?.id]);
+
+  useEffect(() => {
+  if (!loja?.id) return;
+
+  const subscription = AppState.addEventListener("change", (nextState) => {
+    if (nextState === "active") {
+      console.log("🔄 App voltou para foreground, recarregando dados...");
+      fetchProdutos();
+      fetchContagemPedidos();
+    }
+  });
+
+  return () => subscription.remove();
+}, [loja?.id, fetchProdutos, fetchContagemPedidos]);
+
+useEffect(() => {
+  if (!loading && produtos.length === 0 && loja?.id) {
+    console.log("⚠️ Lista vazia detectada, refazendo fetch");
+    fetchProdutos();
+  }
+}, [loading, produtos.length, loja?.id, fetchProdutos]);
+
+useEffect(() => {
+  if (!loja) return;
+
+  setRaioEntrega(
+    loja.raio_entrega_km !== undefined && loja.raio_entrega_km !== null
+      ? Number(loja.raio_entrega_km)
+      : 0
+  );
+}, [loja]);
 
   useFocusEffect(
     useCallback(() => {

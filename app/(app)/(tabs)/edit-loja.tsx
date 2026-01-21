@@ -304,6 +304,16 @@ const handleConnectStripe = async () => {
   </Text>
 </View>
 
+{/* HORÁRIO DE FUNCIONAMENTO */}
+<TouchableOpacity
+  style={styles.menuItem}
+  onPress={() => router.push("/horarios-loja" as any)}
+>
+  <Ionicons name="time-outline" size={22} color="#2563eb" />
+  <Text style={styles.menuItemText}>Horário de Funcionamento</Text>
+  <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
+</TouchableOpacity>
+
         {/* MÉTODOS DE PAGAMENTO */}
         <Text style={styles.sectionTitle}>Métodos de Pagamento</Text>
         <View style={styles.card}>
@@ -397,6 +407,8 @@ const handleConnectStripe = async () => {
            </TouchableOpacity>
            <Text style={styles.versionText}>TrazAí - Painel Lojista</Text>
         </View>
+
+        <Text style={styles.sectionTitle}>Funcionamento</Text>
 
       </KeyboardAwareScrollView>
     </View>
