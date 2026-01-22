@@ -163,10 +163,17 @@ function Financeiro() {
       }
 
       const { error: presentError } = await stripe.presentPaymentSheet();
-      if (presentError) {
-        Alert.alert("Erro", presentError.message);
-        return;
-      }
+
+if (presentError) {
+  if (presentError.code === "Canceled") {
+    // Usuário cancelou — não é erro
+    console.log("Pagamento cancelado pelo usuário");
+    return;
+  }
+
+  Alert.alert("Erro no pagamento", presentError.message);
+  return;
+}
 
       Alert.alert("Sucesso!", "Comissão paga com sucesso.");
       let paymentIntentId = typeof paymentIntent === "string" ? paymentIntent : paymentIntent?.id;
@@ -187,19 +194,44 @@ function Financeiro() {
   };
 
   const handleSaveDeliveryFee = async () => {
-    if (!loja?.id) return Alert.alert("Erro", "Loja não identificada.");
-    const taxaNum = cleanValue(taxaEntrega.replace(",", "."));
-    if (taxaNum < 0) return Alert.alert("Erro", "Valor inválido.");
-    setSavingDeliveryFee(true);
-    try {
-      await api.put(`/lojas/${loja.id}/taxa-entrega`, { taxa_entrega: taxaNum });
-      Alert.alert("Sucesso", "Taxa de entrega atualizada!");
-    } catch {
-      Alert.alert("Erro", "Falha ao salvar taxa.");
-    } finally {
-      setSavingDeliveryFee(false);
-    }
-  };
+  if (!loja?.id) {
+    Alert.alert("Erro", "Loja não identificada.");
+    return;
+  }
+
+  const taxaNum = cleanValue(taxaEntrega);
+
+  if (taxaNum < 0) {
+    Alert.alert("Erro", "Valor inválido.");
+    return;
+  }
+
+  setSavingDeliveryFee(true);
+
+  try {
+    await api.put(
+      `/lojas/${loja.id}/taxa-entrega`,
+      { taxa_entrega: taxaNum },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    Alert.alert("Sucesso", "Taxa de entrega atualizada!");
+    fetchDadosFinanceiros(); // 🔥 atualiza a tela
+  } catch (err: any) {
+    console.log("ERRO APP:", err?.response?.data || err);
+    Alert.alert(
+      "Erro",
+      err?.response?.data?.message || "Falha ao salvar taxa."
+    );
+  } finally {
+    setSavingDeliveryFee(false);
+  }
+};
+
 
   if (loading) {
     return (

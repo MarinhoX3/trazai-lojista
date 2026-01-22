@@ -4,6 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import * as MailComposer from "expo-mail-composer";
+
 
 import {
   ActivityIndicator,
@@ -49,12 +51,37 @@ export default function EditLojaScreen() {
   const [aceitaEntrega, setAceitaEntrega] = useState(true);
   const [aceitaRetirada, setAceitaRetirada] = useState(true);
   const [loadingEntrega, setLoadingEntrega] = useState(false);
+  
+ const falarComSuporte = async () => {
+  const suporteEmail = "trazai_shop_suporte@hotmail.com";
+
+  const isAvailable = await MailComposer.isAvailableAsync();
+  if (!isAvailable) {
+    Alert.alert("Erro", "Nenhum aplicativo de e-mail disponível.");
+    return;
+  }
+
+  await MailComposer.composeAsync({
+    recipients: [suporteEmail],
+    subject: "Suporte - App Lojista",
+    body:
+      `Olá, equipe de suporte.\n\n` +
+      `Loja: ${nome}\n` +
+      `E-mail da loja: ${loja?.email_login || "Não informado"}\n` +
+      `ID da loja: ${loja?.id}\n\n` +
+      `Descreva abaixo o problema:\n`,
+  });
+};
+
 
   /* HEADER */
   const HeaderBar = ({ title }: { title: string }) => (
     <View style={styles.headerContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+     <TouchableOpacity
+  style={styles.menuItem}
+  onPress={falarComSuporte}
+>
         <Ionicons name="arrow-back" size={24} color="#1f2937" />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{title}</Text>
@@ -472,8 +499,6 @@ const handleConnectStripe = async () => {
            </TouchableOpacity>
            <Text style={styles.versionText}>TrazAí - Painel Lojista</Text>
         </View>
-
-        <Text style={styles.sectionTitle}>Funcionamento</Text>
 
       </KeyboardAwareScrollView>
     </View>
