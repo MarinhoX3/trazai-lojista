@@ -61,7 +61,7 @@ export default ({ config }) => ({
 
   notification: {
     icon: "./assets/images/notification-icon.png",
-    color: "rgb(37, 32, 140)",
+    color: "rgb(52, 87, 202)",
     androidMode: "default",
     androidCollapsedTitle: "TrazAí Loja",
   },
