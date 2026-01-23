@@ -59,12 +59,13 @@ export default ({ config }) => ({
     ],
   },
 
-  notification: {
-    icon: "./assets/images/notification-icon.png",
-    color: "rgb(59, 219, 80)",
-    androidMode: "default",
-    androidCollapsedTitle: "TrazAí Loja",
-  },
+ notification: {
+  icon: "./assets/images/notification-icon.png",
+  color: "#3BDB50", // rgb(59, 219, 80)
+  androidMode: "default",
+  androidCollapsedTitle: "TrazAí Loja",
+},
+
 
   plugins: [
     "expo-router",
@@ -80,14 +81,15 @@ export default ({ config }) => ({
         },
       },
     ],
-    [
-      "expo-notifications",
-      {
-        icon: "./assets/images/notification-icon.png",
-        color: "rgb(62, 227, 134)",
-        androidCollapsedTitle: "TrazAí Loja",
-      },
-    ],
+   [
+  "expo-notifications",
+  {
+    icon: "./assets/images/notification-icon.png",
+    color: "#3EE386", // rgb(62, 227, 134)
+    androidCollapsedTitle: "TrazAí Loja",
+  },
+],
+
   ],
 
  extra: {
