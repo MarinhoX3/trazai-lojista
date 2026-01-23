@@ -15,6 +15,7 @@ import {
   StatusBar,
   TouchableOpacity,
   Appearance,
+  KeyboardAvoidingView, // Importado
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
@@ -22,7 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Importações de API e Constantes (Caminhos ajustados para o seu projeto)
+// Importações de API e Constantes
 import api from "../../../src/api/api";
 import { productCategoriesForForms } from "../../../src/constants/categories";
 
@@ -61,7 +62,6 @@ export default function App() {
     { label: "CM - Centímetro", value: "CM" },
   ];
 
-  // 📷 Seleção de Imagem
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
@@ -79,7 +79,6 @@ export default function App() {
     }
   };
 
-  // 💾 Submissão do Produto
   const handleCreateProduct = async () => {
     if (!nome || !preco || !lojaId || !categoria) {
       Alert.alert("Atenção", "Nome, Preço e Categoria são campos obrigatórios.");
@@ -138,141 +137,149 @@ export default function App() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]} 
-        showsVerticalScrollIndicator={false}
+      {/* KeyboardAvoidingView adicionado aqui para envolver o conteúdo editável */}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20} // Ajuste conforme necessário para Android
       >
-        {/* CARTÃO DE IMAGEM */}
-        <View style={styles.imageSection}>
-          <Pressable style={styles.imageUploadArea} onPress={pickImage}>
-            {imagem ? (
-              <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <View style={styles.imageIconCircle}>
-                  <Ionicons name="camera-outline" size={32} color="#94a3b8" />
-                </View>
-                <Text style={styles.imagePlaceholderText}>Adicionar Foto</Text>
-              </View>
-            )}
-            <View style={styles.imageBadge}>
-              <Ionicons name={imagem ? "pencil" : "add"} size={16} color="#fff" />
-            </View>
-          </Pressable>
-        </View>
-
-        {/* SECÇÃO 1: DADOS BÁSICOS */}
-        <Text style={styles.sectionLabel}>Informações Principais</Text>
-        <View style={styles.card}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nome do Produto <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: Hambúrguer Artesanal"
-              placeholderTextColor="#94a3b8"
-              value={nome}
-              onChangeText={setNome}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Descrição</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Descreva os ingredientes ou detalhes do produto..."
-              placeholderTextColor="#94a3b8"
-              value={descricao}
-              onChangeText={setDescricao}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Categoria <Text style={styles.required}>*</Text></Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={categoria}
-                onValueChange={(itemValue) => setCategoria(itemValue as string)}
-                style={styles.picker}
-              >
-                {productCategoriesForForms.map((cat) => (
-                  <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
-                ))}
-              </Picker>
-            </View>
-          </View>
-        </View>
-
-        {/* SECÇÃO 2: VALORES E STOCK */}
-        <Text style={styles.sectionLabel}>Financeiro e Inventário</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Preço <Text style={styles.required}>*</Text></Text>
-              <View style={styles.adornedInput}>
-                <Text style={styles.adornment}>R$</Text>
-                <TextInput
-                  style={styles.inputClean}
-                  placeholder="0,00"
-                  placeholderTextColor="#94a3b8"
-                  value={preco}
-                  onChangeText={setPreco}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Stock Inicial</Text>
-              <View style={styles.adornedInput}>
-                <Ionicons name="cube-outline" size={18} color="#94a3b8" style={{ marginRight: 8 }} />
-                <TextInput
-                  style={styles.inputClean}
-                  placeholder="0"
-                  placeholderTextColor="#94a3b8"
-                  value={estoque}
-                  onChangeText={setEstoque}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Unidade de Venda <Text style={styles.required}>*</Text></Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={unidade}
-                onValueChange={(itemValue) => setUnidade(itemValue as string)}
-                style={styles.picker}
-              >
-                {unidadeOptions.map((option) => (
-                  <Picker.Item key={option.value} label={option.label} value={option.value} />
-                ))}
-              </Picker>
-            </View>
-          </View>
-        </View>
-
-        {/* BOTÃO SALVAR */}
-        <TouchableOpacity 
-          style={[styles.saveButton, isSaving && { opacity: 0.7 }]} 
-          onPress={handleCreateProduct}
-          disabled={isSaving}
+        <ScrollView 
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 60 }]} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled" // Permite clicar no botão salvar mesmo com teclado aberto
         >
-          {isSaving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={22} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.saveButtonText}>Registar Produto</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          {/* CARTÃO DE IMAGEM */}
+          <View style={styles.imageSection}>
+            <Pressable style={styles.imageUploadArea} onPress={pickImage}>
+              {imagem ? (
+                <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <View style={styles.imageIconCircle}>
+                    <Ionicons name="camera-outline" size={32} color="#94a3b8" />
+                  </View>
+                  <Text style={styles.imagePlaceholderText}>Adicionar Foto</Text>
+                </View>
+              )}
+              <View style={styles.imageBadge}>
+                <Ionicons name={imagem ? "pencil" : "add"} size={16} color="#fff" />
+              </View>
+            </Pressable>
+          </View>
 
-      </ScrollView>
+          {/* SECÇÃO 1: DADOS BÁSICOS */}
+          <Text style={styles.sectionLabel}>Informações Principais</Text>
+          <View style={styles.card}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nome do Produto <Text style={styles.required}>*</Text></Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: Hambúrguer Artesanal"
+                placeholderTextColor="#94a3b8"
+                value={nome}
+                onChangeText={setNome}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Descrição</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Descreva os ingredientes ou detalhes do produto..."
+                placeholderTextColor="#94a3b8"
+                value={descricao}
+                onChangeText={setDescricao}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Categoria <Text style={styles.required}>*</Text></Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={categoria}
+                  onValueChange={(itemValue) => setCategoria(itemValue as string)}
+                  style={styles.picker}
+                >
+                  {productCategoriesForForms.map((cat) => (
+                    <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </View>
+
+          {/* SECÇÃO 2: VALORES E STOCK */}
+          <Text style={styles.sectionLabel}>Financeiro e Inventário</Text>
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Preço <Text style={styles.required}>*</Text></Text>
+                <View style={styles.adornedInput}>
+                  <Text style={styles.adornment}>R$</Text>
+                  <TextInput
+                    style={styles.inputClean}
+                    placeholder="0,00"
+                    placeholderTextColor="#94a3b8"
+                    value={preco}
+                    onChangeText={setPreco}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Stock Inicial</Text>
+                <View style={styles.adornedInput}>
+                  <Ionicons name="cube-outline" size={18} color="#94a3b8" style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={styles.inputClean}
+                    placeholder="0"
+                    placeholderTextColor="#94a3b8"
+                    value={estoque}
+                    onChangeText={setEstoque}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Unidade de Venda <Text style={styles.required}>*</Text></Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={unidade}
+                  onValueChange={(itemValue) => setUnidade(itemValue as string)}
+                  style={styles.picker}
+                >
+                  {unidadeOptions.map((option) => (
+                    <Picker.Item key={option.value} label={option.label} value={option.value} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </View>
+
+          {/* BOTÃO SALVAR */}
+          <TouchableOpacity 
+            style={[styles.saveButton, isSaving && { opacity: 0.7 }]} 
+            onPress={handleCreateProduct}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={22} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.saveButtonText}>Registar Produto</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -280,7 +287,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   
-  // Custom Header
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -298,7 +304,6 @@ const styles = StyleSheet.create({
 
   scrollContent: { padding: 20 },
 
-  // Image Upload
   imageSection: { alignItems: 'center', marginBottom: 24 },
   imageUploadArea: {
     width: 140,
@@ -334,11 +339,9 @@ const styles = StyleSheet.create({
     borderColor: '#f8fafc'
   },
 
-  // Cards
   sectionLabel: { fontSize: 11, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12, marginLeft: 4 },
   card: { backgroundColor: '#fff', borderRadius: 24, padding: 18, marginBottom: 20, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
   
-  // Inputs
   inputGroup: { marginBottom: 16 },
   label: { fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 8, marginLeft: 2 },
   required: { color: '#ef4444' },
@@ -364,7 +367,6 @@ const styles = StyleSheet.create({
   pickerContainer: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, overflow: 'hidden' },
   picker: { height: 50, width: '100%', color: '#1e293b' },
 
-  // Primary Button
   saveButton: { 
     backgroundColor: '#16a34a', 
     height: 56, 
