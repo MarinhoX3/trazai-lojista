@@ -59,13 +59,6 @@ export default ({ config }) => ({
     ],
   },
 
-  notification: {
-    icon: "./assets/images/notification-icon.png",
-    color: "rgb(52, 87, 202)",
-    androidMode: "default",
-    androidCollapsedTitle: "TrazAí Loja",
-  },
-
   plugins: [
     "expo-router",
     [
@@ -84,7 +77,7 @@ export default ({ config }) => ({
       "expo-notifications",
       {
         icon: "./assets/images/notification-icon.png",
-        color: "#241f7aff",
+        color: "rgb(53, 237, 133)",
         androidCollapsedTitle: "TrazAí Loja",
       },
     ],

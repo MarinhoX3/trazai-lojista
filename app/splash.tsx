@@ -166,7 +166,7 @@ export default function Splash({ onFinish }: { onFinish: () => void }) {
             marginTop: 25,
           }}
         >
-          <Text style={styles.brandName}>Bem Vindo!</Text>
+          <Text style={styles.brandName}>Seja bem vindo!</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>LOJISTA</Text>
           </View>
@@ -225,13 +225,13 @@ const styles = StyleSheet.create({
     height: 95,
   },
   brandName: {
-    fontSize: 42,
+    fontSize: 30,
     fontWeight: "900",
-    color: "#241f7aff", // Texto em verde para contraste
+    color: "rgb(0, 0, 0)", // Texto em verde para contraste
     letterSpacing: -1,
   },
   badge: {
-    backgroundColor: "#241f7aff", 
+    backgroundColor: "rgb(25, 25, 119)", 
     paddingHorizontal: 16,
     paddingVertical: 4,
     borderRadius: 20,
