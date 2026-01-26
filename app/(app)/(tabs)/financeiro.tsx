@@ -376,7 +376,8 @@ if (presentError) {
               style={styles.modalPrimaryBtn}
               onPress={() => {
                 setStripeWarning(false);
-                router.push("/(app)/configurar-pagamentos" as any);
+                router.push("/(app)/(tabs)/edit-loja" as any);
+
               }}
             >
               <Text style={styles.modalPrimaryBtnText}>Configurar Agora</Text>

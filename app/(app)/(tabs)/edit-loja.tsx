@@ -35,6 +35,9 @@ export default function EditLojaScreen() {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [pixKey, setPixKey] = useState("");
+  const [loadingPix, setLoadingPix] = useState(false);
+
   const [logo, setLogo] = useState<any>(null);
   const [logoAtualUrl, setLogoAtualUrl] = useState<string | null>(null);
 
@@ -102,6 +105,7 @@ export default function EditLojaScreen() {
         setTelefone(res.data.telefone_contato || "");
         setEndereco(res.data.endereco_loja || "");
         setLogoAtualUrl(res.data.url_logo || null);
+        setPixKey(res.data.pix_key || "");
 
         const mp = await api.get(`/pedidos/loja/${loja.id}/metodos-pagamento`);
         setAceitaPix(!!mp.data.aceita_pix);
@@ -156,6 +160,31 @@ export default function EditLojaScreen() {
       Alert.alert("Erro", "Não foi possível atualizar o logo.");
     }
   };
+
+  const salvarPixKey = async () => {
+  if (!loja?.id) return;
+
+  if (!pixKey.trim()) {
+    Alert.alert("Erro", "Informe uma chave Pix válida.");
+    return;
+  }
+
+  try {
+    setLoadingPix(true);
+
+    await api.put(`/lojas/${loja.id}/pix-key`, {
+      pix_key: pixKey
+    });
+
+    Alert.alert("Sucesso", "Chave Pix salva com sucesso!");
+  } catch (err) {
+    console.log("ERRO PIX:", err);
+    Alert.alert("Erro", "Não foi possível salvar a chave Pix.");
+  } finally {
+    setLoadingPix(false);
+  }
+};
+
 
   const salvarMetodosPagamento = async () => {
     if (!loja?.id) return;
@@ -407,6 +436,31 @@ const handleConnectStripe = async () => {
 </View>
 
         {/* MÉTODOS DE PAGAMENTO */}
+
+        <Text style={styles.sectionTitle}>Pagamento via Pix</Text>
+
+<View style={styles.card}>
+  <Text style={styles.cardDescription}>
+    Informe a chave Pix que irá receber os pagamentos dos clientes.
+  </Text>
+
+  <TextInput
+    style={styles.taxInput}
+    placeholder="CPF, telefone, e-mail ou chave aleatória"
+    value={pixKey}
+    onChangeText={setPixKey}
+  />
+
+  <TouchableOpacity 
+    style={[styles.saveOptionsBtn, loadingPix && { opacity: 0.7 }]} 
+    onPress={salvarPixKey}
+  >
+    <Text style={styles.saveOptionsBtnText}>
+      {loadingPix ? "Salvando..." : "Salvar Chave Pix"}
+    </Text>
+  </TouchableOpacity>
+</View>
+
         <Text style={styles.sectionTitle}>Métodos de Pagamento</Text>
         <View style={styles.card}>
           <View style={styles.payRow}>
