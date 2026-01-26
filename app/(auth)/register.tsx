@@ -277,16 +277,17 @@ export default function RegisterStore() {
               )}
             </View>
             <TextInput
-              style={styles.whatsInput}
-              placeholder="Número (Ex: 5511999999999)"
-              keyboardType="phone-pad"
-              value={w.numero}
-              onChangeText={(txt) => {
-                const clone = [...whatsapps];
-                clone[index].numero = txt;
-                setWhatsapps(clone);
-              }}
-            />
+  style={styles.whatsInput}
+  placeholder="Número (Ex: 5511999999999)"
+  placeholderTextColor="#94a3b8"
+  keyboardType="phone-pad"
+  value={w.numero}
+  onChangeText={(txt) => {
+    const clone = [...whatsapps];
+    clone[index].numero = txt;
+    setWhatsapps(clone);
+  }}
+/>
             <TextInput
               style={[styles.whatsInput, { marginTop: 8 }]}
               placeholder="Descrição (Ex: Equipa de Vendas)"
