@@ -153,7 +153,7 @@ export default function RegisterStore() {
 
       await api.post("/lojas", form, { headers: { "Content-Type": "multipart/form-data" } });
       Alert.alert("Sucesso", "A sua loja foi registada com sucesso!");
-      router.replace("/(auth)/index");
+      router.replace("/");
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Ocorreu um erro ao registar a loja.";
       Alert.alert("Erro", msg);
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
   statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
   statusText: { fontSize: 10, fontWeight: '700' },
-  whatsInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, height: 40, fontSize: 14 },
+  whatsInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, height: 40, fontSize: 14, color: '#1e293b' },
 
   // Localização
   gpsBtn: { 

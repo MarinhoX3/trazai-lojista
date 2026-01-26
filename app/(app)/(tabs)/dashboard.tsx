@@ -68,12 +68,13 @@ useEffect(() => {
 
 
   const fetchProdutos = useCallback(async () => {
-    if (!loja?.id) return;
-    try {
-      const response = await api.get(`/produtos?id_loja=${loja.id}`);
-      setProdutos(response.data);
-    } catch (error) {
-      console.error("Erro ao procurar produtos:", error);
+  if (!loja?.id) return;
+
+  try {
+    const response = await api.get(`/produtos?id_loja=${loja.id}`);
+    setProdutos(response.data);
+  } catch (error: any) {
+    console.error("Erro ao buscar produtos:", error);
     }
   }, [loja?.id]);
 
@@ -102,12 +103,6 @@ useEffect(() => {
   return () => subscription.remove();
 }, [loja?.id, fetchProdutos, fetchContagemPedidos]);
 
-useEffect(() => {
-  if (!loading && produtos.length === 0 && loja?.id) {
-    console.log("⚠️ Lista vazia detectada, refazendo fetch");
-    fetchProdutos();
-  }
-}, [loading, produtos.length, loja?.id, fetchProdutos]);
 
 useEffect(() => {
   if (!loja) return;
