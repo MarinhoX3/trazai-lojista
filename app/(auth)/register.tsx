@@ -172,7 +172,7 @@ export default function RegisterStore() {
           style={styles.input}
           value={value}
           onChangeText={onChange}
-          placeholderTextColor="#cbd5e1"
+          placeholderTextColor="#94a3b8"
           {...props}
         />
       </View>
@@ -290,6 +290,7 @@ export default function RegisterStore() {
             <TextInput
               style={[styles.whatsInput, { marginTop: 8 }]}
               placeholder="Descrição (Ex: Equipa de Vendas)"
+              placeholderTextColor="#94a3b8"
               value={w.descricao}
               onChangeText={(txt) => {
                 const clone = [...whatsapps];
