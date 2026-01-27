@@ -10,7 +10,7 @@ import React, {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRootNavigationState, useRouter, useSegments } from "expo-router";
-import api from "../api";
+import api, { ASSET_BASE_URL } from "../api";
 import * as Linking from "expo-linking";
 
 export interface AuthLoja {
@@ -26,7 +26,6 @@ export interface AuthLoja {
   push_token?: string | null;
   raio_entrega_km?: number;
 
-  // 🕒 FUNCIONAMENTO DA LOJA
   loja_aberta_manual?: number | boolean;
   horarios_funcionamento?: {
     [dia: string]: {
@@ -67,25 +66,26 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
         const storedToken = await AsyncStorage.getItem("@AppLojista:token");
 
         if (storedLoja && storedToken) {
-  const lojaData: AuthLoja = JSON.parse(storedLoja);
-  console.log("📦 STORAGE LOJA ===>", lojaData); 
+          const lojaData: AuthLoja = JSON.parse(storedLoja);
 
-  const lojaNormalizada: AuthLoja = {
-  ...lojaData,
+          const lojaNormalizada: AuthLoja = {
+            ...lojaData,
+            url_logo: lojaData.url_logo
+              ? lojaData.url_logo.startsWith("http")
+                ? lojaData.url_logo
+                : `${ASSET_BASE_URL}/${lojaData.url_logo}`
+              : null,
+            raio_entrega_km:
+              lojaData.raio_entrega_km != null
+                ? Number(lojaData.raio_entrega_km)
+                : undefined,
+          };
 
-  raio_entrega_km:
-  lojaData.raio_entrega_km != null
-    ? Number(lojaData.raio_entrega_km)
-    : undefined,
+          setLoja(lojaNormalizada);
+          setToken(storedToken);
 
-};
-
-  setLoja(lojaNormalizada);
-  setToken(storedToken);
-
-  api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
-}
-
+          api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+        }
       } catch (err) {
         console.error("Erro ao carregar autenticação:", err);
       } finally {
@@ -96,48 +96,38 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     loadAuth();
   }, []);
 
-// Controle de rotas com suporte a deep link
-useEffect(() => {
-  if (!navigationState?.key) return;
+  // Controle de rotas
+  useEffect(() => {
+    if (!navigationState?.key) return;
+    if (loading) return;
 
-  if (loading) return;
+    const currentRoute = segments.join("/");
 
-  const currentRoute = segments.join("/");
+    if (currentRoute.includes("+not-found")) return;
+    if (currentRoute.includes("reset-password")) return;
 
-  console.log("🧭 ROTA ATUAL =>", currentRoute);
-
-  // 🚫 nunca redirecionar quando está em not-found
-  if (currentRoute.includes("+not-found")) {
-    return;
-  }
-
-  // 🟢 permitir reset-password SEM login
-  if (currentRoute.includes("reset-password")) {
-    return;
-  }
-
-  // 🔴 usuário NÃO logado
-  if (!loja) {
-    if (!currentRoute.startsWith("(auth)")) {
-      router.replace("/(auth)");
+    if (!loja) {
+      if (!currentRoute.startsWith("(auth)")) {
+        router.replace("/(auth)");
+      }
+      return;
     }
-    return;
-  }
 
-  // 🟢 usuário logado
-  if (!currentRoute.startsWith("(app)")) {
-    router.replace("/(app)/(tabs)/dashboard");
-  }
-
-}, [loading, loja, segments, navigationState]);
-
+    if (!currentRoute.startsWith("(app)")) {
+      router.replace("/(app)/(tabs)/dashboard");
+    }
+  }, [loading, loja, segments, navigationState]);
 
   // 🔹 Login
   const login = async (lojaData: AuthLoja, authToken: string) => {
-    console.log("🟢 LOGIN BACKEND ===>", lojaData);
     try {
       const lojaNormalizada: AuthLoja = {
         ...lojaData,
+        url_logo: lojaData.url_logo
+          ? lojaData.url_logo.startsWith("http")
+            ? lojaData.url_logo
+            : `${ASSET_BASE_URL}/${lojaData.url_logo}`
+          : null,
         raio_entrega_km:
           lojaData.raio_entrega_km != null
             ? Number(lojaData.raio_entrega_km)
@@ -178,7 +168,7 @@ useEffect(() => {
     }
   };
 
-  // 🔹 Atualiza dados da loja no contexto e storage
+  // 🔹 Atualiza dados da loja
   const updateAuthLoja = async (updatedData: Partial<AuthLoja>) => {
     try {
       let updated: AuthLoja | null = null;
@@ -187,18 +177,22 @@ useEffect(() => {
         if (!prev) return null;
 
         updated = {
-  ...prev,
-  ...updatedData,
-  loja_aberta_manual:
-    updatedData.loja_aberta_manual !== undefined
-      ? Boolean(updatedData.loja_aberta_manual)
-      : prev.loja_aberta_manual,
-
-  raio_entrega_km:
-    updatedData.raio_entrega_km !== undefined
-      ? Number(updatedData.raio_entrega_km)
-      : prev.raio_entrega_km ?? 0,
-};
+          ...prev,
+          ...updatedData,
+          url_logo: updatedData.url_logo
+            ? updatedData.url_logo.startsWith("http")
+              ? updatedData.url_logo
+              : `${ASSET_BASE_URL}/${updatedData.url_logo}`
+            : prev.url_logo,
+          loja_aberta_manual:
+            updatedData.loja_aberta_manual !== undefined
+              ? Boolean(updatedData.loja_aberta_manual)
+              : prev.loja_aberta_manual,
+          raio_entrega_km:
+            updatedData.raio_entrega_km !== undefined
+              ? Number(updatedData.raio_entrega_km)
+              : prev.raio_entrega_km ?? 0,
+        };
 
         AsyncStorage.setItem(
           "@AppLojista:loja",

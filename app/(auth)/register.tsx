@@ -1,3 +1,4 @@
+//app/(auth)/register.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -21,6 +22,8 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
+import { useAuthLoja } from "../../src/api/contexts/AuthLojaContext";
+
 
 // Nota: Estes imports dependem da estrutura do seu projeto local
 import api from "../../src/api/api";
@@ -45,6 +48,7 @@ export default function RegisterStore() {
   const router = useRouter();
 
   // ESTADOS DO FORMULÁRIO
+  const { login } = useAuthLoja();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmSenha, setConfirmSenha] = useState("");
@@ -151,9 +155,18 @@ export default function RegisterStore() {
         } as any);
       }
 
-      await api.post("/lojas", form, { headers: { "Content-Type": "multipart/form-data" } });
-      Alert.alert("Sucesso", "A sua loja foi registada com sucesso!");
-      router.replace("/");
+      const res = await api.post("/lojas", form, {
+  headers: { "Content-Type": "multipart/form-data" },
+});
+
+const lojaCriada = res.data.loja;
+
+console.log("LOJA CRIADA =>", lojaCriada);
+
+Alert.alert("Sucesso", "A sua loja foi registada com sucesso!");
+
+await login(lojaCriada, res.data.token ?? "");
+
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Ocorreu um erro ao registar a loja.";
       Alert.alert("Erro", msg);
