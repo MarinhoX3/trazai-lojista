@@ -115,10 +115,17 @@ function Financeiro() {
       const taxaValue = cleanValue(lojaResponse.data.taxa_entrega || 0);
       setTaxaEntrega(taxaValue.toFixed(2).replace(".", ","));
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Loja não encontrada ou sem Stripe configurado.";
-      setStripeMessage(msg);
-      setStripeWarning(true);
-    } finally {
+  console.log("ERRO FINANCEIRO:", err?.response?.data || err);
+
+  // Só mostra aviso se for erro REAL de Stripe
+  if (err?.response?.data?.code === "STRIPE_NOT_CONFIGURED") {
+    setStripeMessage(err.response.data.message);
+    setStripeWarning(true);
+  } else {
+    Alert.alert("Erro", "Não foi possível carregar os dados financeiros.");
+  }
+}
+ finally {
       setLoading(false);
     }
   }, [loja?.id]);

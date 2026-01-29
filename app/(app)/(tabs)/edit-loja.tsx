@@ -447,6 +447,7 @@ const handleConnectStripe = async () => {
   <TextInput
     style={styles.taxInput}
     placeholder="CPF, telefone, e-mail ou chave aleatória"
+    placeholderTextColor="#9ca3af"
     value={pixKey}
     onChangeText={setPixKey}
   />
@@ -517,6 +518,7 @@ const handleConnectStripe = async () => {
                 keyboardType="numeric"
                 onChangeText={setTaxaStripe}
                 placeholder="Ex: 5"
+                placeholderTextColor="#9ca3af"
               />
             </View>
           )}
@@ -625,7 +627,7 @@ const styles = StyleSheet.create({
 
   taxContainer: { marginTop: 12, padding: 12, backgroundColor: '#f9fafb', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' },
   taxLabel: { fontSize: 13, fontWeight: "600", color: '#4b5563' },
-  taxInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginTop: 8, fontSize: 16 },
+  taxInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginTop: 8, fontSize: 16, color: "#000" },
 
   // Menu de Itens
   menuItem: { backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 8 },
