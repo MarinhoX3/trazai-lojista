@@ -163,9 +163,16 @@ const lojaCriada = res.data.loja;
 
 console.log("LOJA CRIADA =>", lojaCriada);
 
-Alert.alert("Sucesso", "A sua loja foi registada com sucesso!");
-
-await login(lojaCriada, res.data.token ?? "");
+Alert.alert(
+  "Sucesso",
+  "A sua loja foi registada com sucesso! Faça login para continuar.",
+  [
+    {
+      text: "OK",
+      onPress: () => router.replace("/") 
+    }
+  ]
+);
 
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Ocorreu um erro ao registar a loja.";
