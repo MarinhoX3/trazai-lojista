@@ -15,32 +15,43 @@ export default ({ config }) => ({
 
   icon: "./assets/images/icon.png",
 
-  // --- CONFIGURAÇÃO DA SPLASH NATIVA ---
-  // Esta imagem deve ser estática (geralmente apenas o logo centralizado)
+  // SPLASH
   splash: {
-  backgroundColor: "#ffffff",
-  resizeMode: "contain",
-},
+    backgroundColor: "#ffffff",
+    resizeMode: "contain",
+  },
 
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.adriano_marinho.trazailojista",
+
+    infoPlist: {
+      NSCameraUsageDescription:
+        "Usamos a câmera para tirar a foto do produto.",
+      NSPhotoLibraryUsageDescription:
+        "Usamos suas fotos para selecionar a imagem do produto.",
+    },
   },
 
   android: {
     package: "com.adriano_marinho.trazailojista",
     versionCode: 28,
 
+    permissions: [
+      "CAMERA",
+      "READ_EXTERNAL_STORAGE",
+      "WRITE_EXTERNAL_STORAGE",
+    ],
+
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#ffffff",
     },
 
-    // Garante que a splash cubra a tela toda em Androids novos
     splash: {
-  backgroundColor: "#ffffff",
-  resizeMode: "contain",
-},
+      backgroundColor: "#ffffff",
+      resizeMode: "contain",
+    },
 
     edgeToEdgeEnabled: true,
     googleServicesFile: "./google-services.json",
@@ -59,16 +70,16 @@ export default ({ config }) => ({
     ],
   },
 
- notification: {
-  icon: "./assets/images/notification-icon.png",
-  color: "#3BDB50", // rgb(59, 219, 80)
-  androidMode: "default",
-  androidCollapsedTitle: "TrazAí Loja",
-},
-
+  notification: {
+    icon: "./assets/images/notification-icon.png",
+    color: "#3BDB50",
+    androidMode: "default",
+    androidCollapsedTitle: "TrazAí Loja",
+  },
 
   plugins: [
     "expo-router",
+
     [
       "expo-build-properties",
       {
@@ -81,28 +92,38 @@ export default ({ config }) => ({
         },
       },
     ],
-   [
-  "expo-notifications",
-  {
-    icon: "./assets/images/notification-icon.png",
-    color: "#3EE386", // rgb(62, 227, 134)
-    androidCollapsedTitle: "TrazAí Loja",
-  },
-],
 
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/notification-icon.png",
+        color: "#3EE386",
+        androidCollapsedTitle: "TrazAí Loja",
+      },
+    ],
+
+    // 📷 CÂMERA E GALERIA
+    [
+      "expo-image-picker",
+      {
+        cameraPermission:
+          "Precisamos da câmera para tirar a foto do produto.",
+        photosPermission:
+          "Precisamos acessar suas fotos para escolher a imagem do produto.",
+      },
+    ],
   ],
 
- extra: {
-  router: {
-    origin: "applojista://",
+  extra: {
+    router: {
+      origin: "applojista://",
+    },
+    apiBaseUrl: "https://trazai.shop/api",
+    assetBaseUrl: "https://trazai.shop",
+    eas: {
+      projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91",
+    },
   },
-  apiBaseUrl: "https://trazai.shop/api",
-  assetBaseUrl: "https://trazai.shop",
-  eas: {
-    projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91",
-  },
-},
-
 
   owner: "adriano_marinho",
 });

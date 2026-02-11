@@ -132,6 +132,35 @@ console.log("API ativo =>", p.ativo, typeof p.ativo);
     }
   };
 
+  const takePhoto = async () => {
+  const permissionResult =
+    await ImagePicker.requestCameraPermissionsAsync();
+
+  if (!permissionResult.granted) {
+    Alert.alert("Atenção", "Precisamos de acesso à câmera.");
+    return;
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.8,
+  });
+
+  if (!result.canceled) {
+    setImagem(result.assets[0]);
+    setImagemExistente(null); // remove imagem antiga
+  }
+};
+
+const escolherImagem = () => {
+  Alert.alert("Alterar Foto", "Escolha uma opção:", [
+    { text: "Tirar Foto", onPress: takePhoto },
+    { text: "Escolher da Galeria", onPress: pickImage },
+    { text: "Cancelar", style: "cancel" },
+  ]);
+};
+
   // 💾 Guarda as alterações do produto
  const handleToggleStatus = async () => {
   try {
@@ -231,7 +260,7 @@ console.log("API ativo =>", p.ativo, typeof p.ativo);
       >
         {/* SECÇÃO DE IMAGEM */}
         <View style={styles.imageCard}>
-          <Pressable style={styles.imageArea} onPress={pickImage}>
+          <Pressable style={styles.imageArea} onPress={escolherImagem}>
             {imagem ? (
               <Image source={{ uri: imagem.uri }} style={styles.image} />
             ) : imagemExistente ? (

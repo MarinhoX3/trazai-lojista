@@ -79,6 +79,33 @@ export default function App() {
     }
   };
 
+  const takePhoto = async () => {
+  const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+  if (!permissionResult.granted) {
+    Alert.alert("Atenção", "Permita acesso à câmera para tirar a foto.");
+    return;
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.8,
+  });
+
+  if (!result.canceled) {
+    setImagem(result.assets[0]);
+  }
+};
+
+const escolherImagem = () => {
+  Alert.alert("Adicionar Foto", "Escolha uma opção:", [
+    { text: "Tirar Foto", onPress: takePhoto },
+    { text: "Escolher da Galeria", onPress: pickImage },
+    { text: "Cancelar", style: "cancel" },
+  ]);
+};
+
   const handleCreateProduct = async () => {
     if (!nome || !preco || !lojaId || !categoria) {
       Alert.alert("Atenção", "Nome, Preço e Categoria são campos obrigatórios.");
@@ -150,7 +177,7 @@ export default function App() {
         >
           {/* CARTÃO DE IMAGEM */}
           <View style={styles.imageSection}>
-            <Pressable style={styles.imageUploadArea} onPress={pickImage}>
+            <Pressable style={styles.imageUploadArea} onPress={escolherImagem}>
               {imagem ? (
                 <Image source={{ uri: imagem.uri }} style={styles.imagemPreview} />
               ) : (
