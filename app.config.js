@@ -23,7 +23,7 @@ export default ({ config }) => ({
 
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.adriano_marinho.trazailojista",
+    bundleIdentifier: "com.trazai.lojista",
 
     infoPlist: {
       NSCameraUsageDescription:
@@ -33,8 +33,12 @@ export default ({ config }) => ({
     },
   },
 
+  ios: {
+  bundleIdentifier: "com.trazai.lojista",
+},
+
   android: {
-    package: "com.adriano_marinho.trazailojista",
+    package: "com.trazai.lojista",
     versionCode: 28,
 
     permissions: [
