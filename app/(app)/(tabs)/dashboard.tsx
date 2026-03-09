@@ -20,7 +20,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppState } from "react-native";
-
+import { Share } from "react-native";
 
 // Importações de API e Contexto
 import api, { ASSET_BASE_URL } from "../../../src/api/api";
@@ -42,6 +42,31 @@ const CONTAINER_PADDING = 16;
 const CARD_WIDTH = (width - (CONTAINER_PADDING * 2) - (CARD_MARGIN * (NUM_COLUMNS - 1) * 2)) / NUM_COLUMNS;
 
 export default function DashboardScreen() {
+ const compartilharLoja = async () => {
+  if (!loja) return;
+
+  const linkApp = "https://play.google.com/store/apps/details?id=com.trazai.cliente";
+
+  const mensagem = `🛒 Agora minha loja está no TrazAí!
+
+Faça seus pedidos pelo aplicativo TrazAí Shop.
+
+📲 Baixe o app:
+${linkApp}
+
+🔎 Procure pela loja:
+${loja.nome_loja}`;
+
+  try {
+    await Share.share({
+      title: "Minha loja no TrazAí",
+      message: mensagem
+    });
+  } catch (error) {
+    console.log("Erro ao compartilhar:", error);
+  }
+};
+
   const router = useRouter();
   const { loja, updateAuthLoja } = useAuthLoja();
   const insets = useSafeAreaInsets();
@@ -228,7 +253,29 @@ useEffect(() => {
         keyExtractor={(item) => item.id.toString()}
         numColumns={NUM_COLUMNS}
         ListHeaderComponent={
-          <View style={styles.headerContent}>
+          <View style={styles.headerContent}>        
+
+          <View style={styles.shareCard}>
+  <View style={{ flex: 1 }}>
+    <Text style={styles.shareTitle}>
+      Divulgue sua loja 🚀
+    </Text>
+
+    <Text style={styles.shareText}>
+      Compartilhe sua loja com seus clientes
+      e receba pedidos pelo TrazAí Shop.
+    </Text>
+  </View>
+
+  <TouchableOpacity
+    style={styles.shareButton}
+    onPress={compartilharLoja}
+  >
+    <Ionicons name="share-social" size={18} color="#fff" />
+    <Text style={styles.shareButtonText}>Compartilhar</Text>
+  </TouchableOpacity>
+</View>
+
             {/* KPI CARDS ROW */}
             <View style={styles.kpiRow}>
               <View style={styles.statsCard}>
@@ -312,6 +359,44 @@ const styles = StyleSheet.create({
   containerCentered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#fff' },
   loadingText: { marginTop: 12, color: '#64748b', fontWeight: '500' },
   
+  shareCard: {
+  backgroundColor: "#ECFDF5",
+  borderRadius: 18,
+  padding: 16,
+  marginBottom: 20,
+  flexDirection: "row",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "#D1FAE5"
+},
+
+shareTitle: {
+  fontSize: 15,
+  fontWeight: "800",
+  color: "#065F46",
+  marginBottom: 4
+},
+
+shareText: {
+  fontSize: 12,
+  color: "#065F46"
+},
+
+shareButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#10B981",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 12
+},
+
+shareButtonText: {
+  color: "#fff",
+  fontWeight: "700",
+  marginLeft: 6
+},
+
   // Header
   header: { 
     flexDirection: 'row', 
