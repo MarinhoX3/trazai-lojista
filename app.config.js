@@ -15,7 +15,6 @@ export default ({ config }) => ({
 
   icon: "./assets/images/icon.png",
 
-  // SPLASH
   splash: {
     backgroundColor: "#ffffff",
     resizeMode: "contain",
@@ -33,13 +32,9 @@ export default ({ config }) => ({
     },
   },
 
-  ios: {
-  bundleIdentifier: "com.trazai.lojista",
-},
-
   android: {
-    package: "com.trazai.lojista",
-    versionCode: 28,
+  package: "com.adriano_marinho.trazailojista",
+  versionCode: 29,
 
     permissions: [
       "CAMERA",
@@ -58,17 +53,23 @@ export default ({ config }) => ({
     },
 
     edgeToEdgeEnabled: true,
+
     googleServicesFile: "./google-services.json",
 
     intentFilters: [
       {
         action: "VIEW",
-        data: [{ scheme: "whatsapp" }, { scheme: "https", host: "wa.me" }],
+        data: [
+          { scheme: "whatsapp" },
+          { scheme: "https", host: "wa.me" }
+        ],
         category: ["BROWSABLE", "DEFAULT"],
       },
       {
         action: "VIEW",
-        data: [{ scheme: "applojista" }],
+        data: [
+          { scheme: "applojista" }
+        ],
         category: ["BROWSABLE", "DEFAULT"],
       },
     ],
@@ -106,7 +107,6 @@ export default ({ config }) => ({
       },
     ],
 
-    // 📷 CÂMERA E GALERIA
     [
       "expo-image-picker",
       {
@@ -122,8 +122,10 @@ export default ({ config }) => ({
     router: {
       origin: "applojista://",
     },
+
     apiBaseUrl: "https://trazai.shop/api",
     assetBaseUrl: "https://trazai.shop",
+
     eas: {
       projectId: "09852f0c-9a00-455b-bbfc-c7de37bedf91",
     },
