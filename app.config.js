@@ -7,7 +7,7 @@ export default ({ config }) => ({
   slug: "traz-ai-lojista",
   scheme: "applojista",
 
-  version: "1.0.1",
+  version: "1.0.2",
 
   orientation: "portrait",
   userInterfaceStyle: "light",
@@ -34,7 +34,7 @@ export default ({ config }) => ({
 
   android: {
   package: "com.adriano_marinho.trazailojista",
-  versionCode: 29,
+  versionCode: 30,
 
     permissions: [
       "CAMERA",
