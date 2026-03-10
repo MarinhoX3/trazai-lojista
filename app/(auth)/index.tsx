@@ -114,22 +114,6 @@ export default function LoginScreen() {
 
         <View style={styles.formContainer}>
 
-          <Text style={styles.welcomeTitle}>Crie sua loja online grátis</Text>
-
-          <Text style={styles.subTitle}>
-            Venda pelo TrazAí e pague comissão apenas quando vender
-          </Text>
-
-          {/* BENEFÍCIOS */}
-
-          <View style={styles.benefitsBox}>
-
-            <Text style={styles.benefit}>✓ Cadastro gratuito</Text>
-            <Text style={styles.benefit}>✓ Sem mensalidade</Text>
-            <Text style={styles.benefit}>✓ Comissão só quando vender</Text>
-
-          </View>
-
           {/* CAMPO EMAIL */}
 
           <View style={styles.inputGroup}>

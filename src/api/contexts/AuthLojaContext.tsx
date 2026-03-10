@@ -107,11 +107,11 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
     if (currentRoute.includes("reset-password")) return;
 
     if (!loja) {
-      if (!currentRoute.startsWith("(auth)")) {
-        router.replace("/(auth)");
-      }
-      return;
-    }
+  if (!currentRoute.startsWith("(auth)")) {
+    router.replace("/(auth)/welcome");
+  }
+  return;
+}
 
     if (!currentRoute.startsWith("(app)")) {
       router.replace("/(app)/(tabs)/dashboard");
@@ -162,7 +162,7 @@ export const AuthLojaProvider = ({ children }: { children: ReactNode }) => {
       await AsyncStorage.removeItem("@AppLojista:loja");
       await AsyncStorage.removeItem("@AppLojista:token");
 
-      router.replace("/(auth)");
+      router.replace("/(auth)/welcome");
     } catch (err) {
       console.error("Erro ao fazer logout:", err);
     }
