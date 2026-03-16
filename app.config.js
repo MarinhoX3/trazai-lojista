@@ -34,7 +34,7 @@ export default ({ config }) => ({
 
   android: {
   package: "com.adriano_marinho.trazailojista",
-  versionCode: 30,
+  versionCode: 31,
 
     permissions: [
       "CAMERA",
