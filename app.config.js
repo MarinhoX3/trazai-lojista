@@ -7,7 +7,7 @@ export default ({ config }) => ({
   slug: "traz-ai-lojista",
   scheme: "applojista",
 
-  version: "1.0.2",
+  version: "1.0.3",
 
   orientation: "portrait",
   userInterfaceStyle: "light",
