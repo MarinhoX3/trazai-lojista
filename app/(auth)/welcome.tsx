@@ -14,6 +14,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Linking } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -44,7 +45,8 @@ export default function WelcomeScreen() {
         <Text style={styles.title}>Crie sua loja grátis</Text>
 
         <Text style={styles.subtitle}>
-          Venda seus produtos e receba pedidos pelo celular com o TrazAí.
+          Cadastre sua loja no TrazAí e compartilhe com seus clientes.
+Eles poderão ver seus produtos e fazer pedidos pelo app.
         </Text>
 
         {/* BENEFÍCIOS */}
@@ -58,7 +60,7 @@ export default function WelcomeScreen() {
 
           <View style={styles.benefitRow}>
             <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-            <Text style={styles.benefitText}>Receba pedidos online</Text>
+            <Text style={styles.benefitText}>Receba pedidos de clientes do bairro</Text>
           </View>
 
           <View style={styles.benefitRow}>
@@ -68,7 +70,7 @@ export default function WelcomeScreen() {
         </View>
 
 <Text style={styles.commissionText}>
-  Sem mensalidade. Você paga apenas comissão quando vender.
+ Você só paga uma pequena comissão quando fizer uma venda.
 </Text>
 
 {/* BOTÃO CRIAR CONTA */}
@@ -76,9 +78,24 @@ export default function WelcomeScreen() {
           style={styles.createButton}
           onPress={() => router.push("/(auth)/register")}
         >
-          <Text style={styles.createButtonText}>Criar conta grátis</Text>
+          <Text style={styles.createButtonText}>Criar minha loja grátis</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" />
         </TouchableOpacity>
+
+        <TouchableOpacity
+  style={styles.whatsappButton}
+  onPress={() =>
+  Linking.openURL(
+    "https://wa.me/5585920013692?text=Olá,%20quero%20criar%20minha%20loja%20no%20TrazAí"
+  )
+}
+>
+  <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+  <Text style={styles.whatsappText}>
+  Precisa de ajuda?{"\n"}
+  Montamos sua loja para você no WhatsApp.
+</Text>
+</TouchableOpacity>
 
         {/* LOGIN */}
         <View style={styles.loginContainer}>
@@ -191,4 +208,17 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 4,
   },
+  whatsappButton: {
+  marginTop: 18,
+  alignItems: "center",
+  justifyContent: "center"
+},
+
+whatsappText: {
+  marginTop: 6,
+  fontSize: 14,
+  color: "#25D366",
+  fontWeight: "700",
+  textAlign: "center"
+}
 });
