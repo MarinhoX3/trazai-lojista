@@ -55,7 +55,10 @@ Faça seus pedidos pelo aplicativo TrazAí Shop.
 ${linkApp}
 
 🔎 Procure pela loja:
-${loja.nome_loja}`;
+${loja?.nome_loja || "Minha loja"}`;
+
+console.log("MENSAGEM FINAL =>", mensagem);
+console.log("LOJA COMPLETA =>", loja);
 
   try {
     await Share.share({

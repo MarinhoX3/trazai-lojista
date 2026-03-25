@@ -17,6 +17,7 @@ import {
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Clipboard from "expo-clipboard";
 
 // Importações de API e Contextos (ajustados para a sua estrutura)
 import api from '../../../src/api/api';
@@ -104,6 +105,16 @@ export default function App() {
     Linking.openURL(url).catch(() => Alert.alert("Erro", "Não foi possível abrir o WhatsApp."));
   };
 
+  const copiarEndereco = async (endereco: string) => {
+  await Clipboard.setStringAsync(endereco);
+  Alert.alert("Endereço copiado!", "Cole no Google Maps 📍");
+};
+
+const abrirMapa = (endereco: string) => {
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
+  Linking.openURL(url);
+};
+
   const renderPedido = ({ item }: { item: Pedido }) => {
     const statusAtualIndex = STATUS_FLUXO.indexOf(item.status);
     const proximoStatus = STATUS_FLUXO[statusAtualIndex + 1];
@@ -155,10 +166,30 @@ export default function App() {
         </View>
 
         {!isPickup && (
-          <View style={styles.addressBox}>
-            <Ionicons name="location-outline" size={16} color="#94a3b8" />
-            <Text style={styles.addressText} numberOfLines={2}>{item.endereco_entrega}</Text>
-          </View>
+         <TouchableOpacity
+  style={styles.addressBox}
+  onPress={() => {
+  if (!item.endereco_entrega) {
+    Alert.alert("Endereço não disponível");
+    return;
+  }
+  copiarEndereco(item.endereco_entrega);
+}}
+>
+  <Ionicons name="location-outline" size={16} color="#94a3b8" />
+
+  <View style={{ flex: 1, marginLeft: 8 }}>
+    <Text style={[styles.addressText, { color: "#2563eb", fontWeight: "600" }]}>
+      {item.endereco_entrega}
+    </Text>
+
+    <Text style={{ fontSize: 11, color: "#94a3b8" }}>
+      Toque para copiar
+    </Text>
+  </View>
+
+  <Ionicons name="copy-outline" size={16} color="#2563eb" />
+</TouchableOpacity>
         )}
 
         {/* VALOR TOTAL */}

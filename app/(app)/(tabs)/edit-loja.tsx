@@ -83,7 +83,7 @@ export default function EditLojaScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
      <TouchableOpacity
   style={styles.menuItem}
-  onPress={falarComSuporte}
+  onPress={() => router.back()}
 >
         <Ionicons name="arrow-back" size={24} color="#1f2937" />
       </TouchableOpacity>
